@@ -1,0 +1,18 @@
+# Build artifacts
+/noto
+/bin/
+*.exe
+*.test
+*.out
+
+# Go tooling
+/vendor/
+
+# Local data (SQLite index / notes) if run against the repo dir during development
+*.db
+*.db-journal
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
