@@ -34,7 +34,7 @@ func newTestModel(t *testing.T) (Model, config.Config, *index.DB) {
 // about the splash and would otherwise have their first keypress consumed
 // by it instead of reaching the screen under test.
 func skipSplash(m Model) Model {
-	m.mode = modeList
+	m.mode = modeMain
 	return m
 }
 
@@ -81,8 +81,8 @@ func TestNewNoteFlow_FullRoundTrip(t *testing.T) {
 		t.Fatalf("Quit() returned error: %v", err)
 	}
 	final := tm.FinalModel(t, teatest.WithFinalTimeout(2*time.Second)).(Model)
-	if final.mode != modeList {
-		t.Errorf("final mode = %v, want modeList", final.mode)
+	if final.mode != modeMain {
+		t.Errorf("final mode = %v, want modeMain", final.mode)
 	}
 	if final.err != nil {
 		t.Errorf("final err = %v, want nil", final.err)
@@ -108,8 +108,8 @@ func TestNewNoteFlow_EscCancelsWithoutCreatingFile(t *testing.T) {
 		t.Fatalf("Quit() returned error: %v", err)
 	}
 	final := tm.FinalModel(t, teatest.WithFinalTimeout(2*time.Second)).(Model)
-	if final.mode != modeList {
-		t.Errorf("final mode = %v, want modeList", final.mode)
+	if final.mode != modeMain {
+		t.Errorf("final mode = %v, want modeMain", final.mode)
 	}
 
 	paths, err := storage.List(cfg.NotesDir)
@@ -152,8 +152,8 @@ func TestHandleEditorFinished(t *testing.T) {
 	got, _ := m.Update(editorFinishedMsg{path: path, err: nil})
 	final := got.(Model)
 
-	if final.mode != modeList {
-		t.Errorf("mode = %v, want modeList", final.mode)
+	if final.mode != modeMain {
+		t.Errorf("mode = %v, want modeMain", final.mode)
 	}
 	if final.err != nil {
 		t.Errorf("err = %v, want nil", final.err)
@@ -168,8 +168,8 @@ func TestHandleEditorFinished_PropagatesError(t *testing.T) {
 	got, _ := m.Update(editorFinishedMsg{path: "/does/not/matter", err: wantErr})
 	final := got.(Model)
 
-	if final.mode != modeList {
-		t.Errorf("mode = %v, want modeList", final.mode)
+	if final.mode != modeMain {
+		t.Errorf("mode = %v, want modeMain", final.mode)
 	}
 	if final.err != wantErr {
 		t.Errorf("err = %v, want %v", final.err, wantErr)

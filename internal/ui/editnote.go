@@ -33,7 +33,7 @@ func (m Model) startEditingExisting() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleEditSessionFinished(msg editSessionFinishedMsg) (tea.Model, tea.Cmd) {
-	m.mode = modeList
+	m.mode = modeMain
 
 	if msg.err != nil {
 		m.err = msg.err

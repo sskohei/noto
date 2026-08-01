@@ -73,11 +73,11 @@ func TestSearchFlow_FiltersListAfterDebounce(t *testing.T) {
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("/")})
 	typeRunes(tm, "会議")
 
-	// Give the debounce (200ms) time to fire, then confirm the list is
-	// filtered down to just the matching note.
-	teatest.WaitFor(t, out, func(bts []byte) bool {
-		return containsBytes("会議メモ")(bts) && !containsBytes("買い物リスト")(bts)
-	}, teatest.WithDuration(2*time.Second))
+	// Let the debounce settle, then inspect the resulting model directly
+	// rather than racing on intermediate rendered frames (the accumulated
+	// output buffer can still contain earlier, pre-debounce frames showing
+	// the unfiltered list).
+	time.Sleep(searchDebounceDelay + 100*time.Millisecond)
 
 	if err := tm.Quit(); err != nil {
 		t.Fatalf("Quit() returned error: %v", err)
@@ -111,8 +111,8 @@ func TestSearchFlow_EscClearsAndRestoresFullList(t *testing.T) {
 		t.Fatalf("Quit() returned error: %v", err)
 	}
 	final := tm.FinalModel(t, teatest.WithFinalTimeout(2*time.Second)).(Model)
-	if final.mode != modeList {
-		t.Errorf("final mode = %v, want modeList", final.mode)
+	if final.mode != modeMain {
+		t.Errorf("final mode = %v, want modeMain", final.mode)
 	}
 	if final.search.Value() != "" {
 		t.Errorf("final search query = %q, want empty", final.search.Value())
@@ -143,8 +143,8 @@ func TestSearchFlow_EnterKeepsQueryAndReturnsFocusToList(t *testing.T) {
 		t.Fatalf("Quit() returned error: %v", err)
 	}
 	final := tm.FinalModel(t, teatest.WithFinalTimeout(2*time.Second)).(Model)
-	if final.mode != modeList {
-		t.Errorf("final mode = %v, want modeList", final.mode)
+	if final.mode != modeMain {
+		t.Errorf("final mode = %v, want modeMain", final.mode)
 	}
 	if final.search.Value() != "会議" {
 		t.Errorf("final search query = %q, want %q", final.search.Value(), "会議")
@@ -156,7 +156,8 @@ func TestSearchFlow_EnterKeepsQueryAndReturnsFocusToList(t *testing.T) {
 
 func TestHandleSearchDebounce_IgnoresStaleGeneration(t *testing.T) {
 	m, _, _ := newSearchTestModel(t)
-	m.mode = modeSearch
+	m.mode = modeMain
+	m.focusedPanel = focusSearch
 	m.searchGeneration = 5
 
 	got, _ := m.Update(searchDebounceMsg{query: "会議", generation: 3})
@@ -170,7 +171,8 @@ func TestHandleSearchDebounce_IgnoresStaleGeneration(t *testing.T) {
 
 func TestHandleSearchDebounce_AppliesCurrentGeneration(t *testing.T) {
 	m, _, _ := newSearchTestModel(t)
-	m.mode = modeSearch
+	m.mode = modeMain
+	m.focusedPanel = focusSearch
 	m.searchGeneration = 3
 
 	got, _ := m.Update(searchDebounceMsg{query: "会議", generation: 3})
@@ -187,7 +189,8 @@ func TestHandleSearchDebounce_AppliesCurrentGeneration(t *testing.T) {
 // clobbering the just-restored full list.
 func TestEsc_InvalidatesInFlightDebounceTick(t *testing.T) {
 	m, _, _ := newSearchTestModel(t)
-	m.mode = modeSearch
+	m.mode = modeMain
+	m.focusedPanel = focusSearch
 	m.searchGeneration = 3
 	m.search.SetValue("会議")
 

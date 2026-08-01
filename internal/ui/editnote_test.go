@@ -62,8 +62,8 @@ func TestEditFlow_FullRoundTrip(t *testing.T) {
 		t.Fatalf("Quit() returned error: %v", err)
 	}
 	final := tm.FinalModel(t, teatest.WithFinalTimeout(2*time.Second)).(Model)
-	if final.mode != modeList {
-		t.Errorf("final mode = %v, want modeList", final.mode)
+	if final.mode != modeMain {
+		t.Errorf("final mode = %v, want modeMain", final.mode)
 	}
 	if final.err != nil {
 		t.Errorf("final err = %v, want nil", final.err)
@@ -119,8 +119,8 @@ func TestEditFlow_EKeyAlsoStartsEditing(t *testing.T) {
 		t.Fatalf("Quit() returned error: %v", err)
 	}
 	final := tm.FinalModel(t, teatest.WithFinalTimeout(2*time.Second)).(Model)
-	if final.mode != modeList {
-		t.Errorf("final mode = %v, want modeList", final.mode)
+	if final.mode != modeMain {
+		t.Errorf("final mode = %v, want modeMain", final.mode)
 	}
 }
 
@@ -133,8 +133,8 @@ func TestStartEditingExisting_NoOpWhenListEmpty(t *testing.T) {
 	if cmd != nil {
 		t.Error("startEditingExisting() with empty list returned a non-nil Cmd, want nil")
 	}
-	if final.mode != modeList {
-		t.Errorf("mode = %v, want modeList", final.mode)
+	if final.mode != modeMain {
+		t.Errorf("mode = %v, want modeMain", final.mode)
 	}
 }
 
@@ -146,8 +146,8 @@ func TestHandleEditSessionFinished_PropagatesError(t *testing.T) {
 	got, _ := m.Update(editSessionFinishedMsg{path: "/does/not/matter", err: wantErr})
 	final := got.(Model)
 
-	if final.mode != modeList {
-		t.Errorf("mode = %v, want modeList", final.mode)
+	if final.mode != modeMain {
+		t.Errorf("mode = %v, want modeMain", final.mode)
 	}
 	if final.err != wantErr {
 		t.Errorf("err = %v, want %v", final.err, wantErr)

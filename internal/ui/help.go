@@ -45,7 +45,7 @@ func (m Model) updateHelp(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch keyMsg.String() {
 	case "?", "esc", "q":
-		m.mode = modeList
+		m.mode = modeMain
 		return m, nil
 	}
 

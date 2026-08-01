@@ -19,7 +19,7 @@ func (m Model) updateConfirmDelete(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case "y":
 		return m.confirmDelete()
 	case "n", "esc":
-		m.mode = modeList
+		m.mode = modeMain
 		return m, nil
 	}
 
@@ -29,7 +29,7 @@ func (m Model) updateConfirmDelete(msg tea.Msg) (tea.Model, tea.Cmd) {
 // confirmDelete deletes the note under the cursor and refreshes the list.
 func (m Model) confirmDelete() (tea.Model, tea.Cmd) {
 	note := m.notes[m.cursor]
-	m.mode = modeList
+	m.mode = modeMain
 
 	if err := app.DeleteNote(m.idx, m.cfg.NotesDir, note.Path); err != nil {
 		m.err = err

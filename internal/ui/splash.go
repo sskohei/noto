@@ -27,7 +27,7 @@ const splashHint = "何かキーを押すと始まります..."
 // updateSplash handles input for modeSplash: any keypress dismisses it.
 func (m Model) updateSplash(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if _, ok := msg.(tea.KeyMsg); ok {
-		m.mode = modeList
+		m.mode = modeMain
 	}
 	return m, nil
 }
@@ -38,7 +38,7 @@ func (m Model) handleSplashTimeout(msg splashTimeoutMsg) (tea.Model, tea.Cmd) {
 	if m.mode != modeSplash {
 		return m, nil
 	}
-	m.mode = modeList
+	m.mode = modeMain
 	return m, nil
 }
 

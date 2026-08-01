@@ -7,8 +7,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// updateTagFilter handles key input for modeTagFilter.
-func (m Model) updateTagFilter(msg tea.Msg) (tea.Model, tea.Cmd) {
+// updateTagsPanel handles key input local to the tags panel (focusTags).
+func (m Model) updateTagsPanel(msg tea.Msg) (tea.Model, tea.Cmd) {
 	keyMsg, ok := msg.(tea.KeyMsg)
 	if !ok {
 		return m, nil
@@ -41,16 +41,16 @@ func (m Model) updateTagFilter(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.err = nil
 		return m, nil
 	case "esc":
-		m.mode = modeList
-		return m, nil
+		next, cmd := m.switchFocus(focusList)
+		return next, cmd
 	}
 
 	return m, nil
 }
 
-func (m Model) viewTagFilter() string {
+// tagsPanelContent renders the tags panel's body.
+func (m Model) tagsPanelContent() string {
 	var b strings.Builder
-	b.WriteString("タグで絞り込み\n\n")
 
 	if len(m.allTags) == 0 {
 		b.WriteString("(タグがありません)\n")
@@ -70,7 +70,6 @@ func (m Model) viewTagFilter() string {
 		fmt.Fprintf(&b, "%s%s %s\n", mark, checkbox, tag)
 	}
 
-	b.WriteString("\nj/k: 移動  Enter/Space: 選択切替  Esc: 一覧に戻る\n")
 	return b.String()
 }
 

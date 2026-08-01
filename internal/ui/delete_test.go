@@ -62,8 +62,8 @@ func TestDeleteFlow_ConfirmRemovesNoteAndFile(t *testing.T) {
 		t.Fatalf("Quit() returned error: %v", err)
 	}
 	final := tm.FinalModel(t, teatest.WithFinalTimeout(2*time.Second)).(Model)
-	if final.mode != modeList {
-		t.Errorf("final mode = %v, want modeList", final.mode)
+	if final.mode != modeMain {
+		t.Errorf("final mode = %v, want modeMain", final.mode)
 	}
 	if len(final.notes) != 0 {
 		t.Errorf("final.notes = %+v, want empty", final.notes)
@@ -100,8 +100,8 @@ func TestDeleteFlow_NCancelsWithoutDeleting(t *testing.T) {
 		t.Fatalf("Quit() returned error: %v", err)
 	}
 	final := tm.FinalModel(t, teatest.WithFinalTimeout(2*time.Second)).(Model)
-	if final.mode != modeList {
-		t.Errorf("final mode = %v, want modeList", final.mode)
+	if final.mode != modeMain {
+		t.Errorf("final mode = %v, want modeMain", final.mode)
 	}
 	if len(final.notes) != 1 {
 		t.Errorf("final.notes = %+v, want the note to remain", final.notes)
@@ -131,8 +131,8 @@ func TestDeleteFlow_EscCancelsWithoutDeleting(t *testing.T) {
 		t.Fatalf("Quit() returned error: %v", err)
 	}
 	final := tm.FinalModel(t, teatest.WithFinalTimeout(2*time.Second)).(Model)
-	if final.mode != modeList {
-		t.Errorf("final mode = %v, want modeList", final.mode)
+	if final.mode != modeMain {
+		t.Errorf("final mode = %v, want modeMain", final.mode)
 	}
 	if len(final.notes) != 1 {
 		t.Errorf("final.notes = %+v, want the note to remain", final.notes)
@@ -152,8 +152,8 @@ func TestUpdateList_FirstDArmsPendingDelete(t *testing.T) {
 	if !final.pendingDelete {
 		t.Error("pendingDelete = false after first d, want true")
 	}
-	if final.mode != modeList {
-		t.Errorf("mode after first d = %v, want modeList", final.mode)
+	if final.mode != modeMain {
+		t.Errorf("mode after first d = %v, want modeMain", final.mode)
 	}
 }
 
@@ -180,8 +180,8 @@ func TestUpdateList_DDNoOpWhenListEmpty(t *testing.T) {
 	got, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("d")})
 	final := got.(Model)
 
-	if final.mode != modeList {
-		t.Errorf("mode = %v, want modeList (dd on empty list should be a no-op)", final.mode)
+	if final.mode != modeMain {
+		t.Errorf("mode = %v, want modeMain (dd on empty list should be a no-op)", final.mode)
 	}
 }
 
@@ -213,8 +213,8 @@ func TestUpdateConfirmDelete_NAndEscCancelWithoutDeleting(t *testing.T) {
 		got, _ := m.Update(key)
 		final := got.(Model)
 
-		if final.mode != modeList {
-			t.Errorf("[%v] mode = %v, want modeList", key, final.mode)
+		if final.mode != modeMain {
+			t.Errorf("[%v] mode = %v, want modeMain", key, final.mode)
 		}
 		if len(final.notes) != 1 {
 			t.Errorf("[%v] notes = %+v, want unchanged", key, final.notes)
