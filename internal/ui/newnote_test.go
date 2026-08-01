@@ -26,7 +26,16 @@ func newTestModel(t *testing.T) (Model, config.Config, *index.DB) {
 	}
 	t.Cleanup(func() { idx.Close() })
 
-	return New(cfg, idx), cfg, idx
+	return skipSplash(New(cfg, idx)), cfg, idx
+}
+
+// skipSplash returns m past the startup splash screen, as if the user had
+// already dismissed it. Tests other than splash_test.go's own don't care
+// about the splash and would otherwise have their first keypress consumed
+// by it instead of reaching the screen under test.
+func skipSplash(m Model) Model {
+	m.mode = modeMain
+	return m
 }
 
 func TestNewNoteFlow_FullRoundTrip(t *testing.T) {
@@ -72,8 +81,8 @@ func TestNewNoteFlow_FullRoundTrip(t *testing.T) {
 		t.Fatalf("Quit() returned error: %v", err)
 	}
 	final := tm.FinalModel(t, teatest.WithFinalTimeout(2*time.Second)).(Model)
-	if final.mode != modeList {
-		t.Errorf("final mode = %v, want modeList", final.mode)
+	if final.mode != modeMain {
+		t.Errorf("final mode = %v, want modeMain", final.mode)
 	}
 	if final.err != nil {
 		t.Errorf("final err = %v, want nil", final.err)
@@ -99,8 +108,8 @@ func TestNewNoteFlow_EscCancelsWithoutCreatingFile(t *testing.T) {
 		t.Fatalf("Quit() returned error: %v", err)
 	}
 	final := tm.FinalModel(t, teatest.WithFinalTimeout(2*time.Second)).(Model)
-	if final.mode != modeList {
-		t.Errorf("final mode = %v, want modeList", final.mode)
+	if final.mode != modeMain {
+		t.Errorf("final mode = %v, want modeMain", final.mode)
 	}
 
 	paths, err := storage.List(cfg.NotesDir)
@@ -121,7 +130,7 @@ func TestHandleEditorFinished(t *testing.T) {
 	}
 	t.Cleanup(func() { idx.Close() })
 
-	m := New(cfg, idx)
+	m := skipSplash(New(cfg, idx))
 
 	now := time.Now()
 	n := storage.Note{
@@ -143,8 +152,8 @@ func TestHandleEditorFinished(t *testing.T) {
 	got, _ := m.Update(editorFinishedMsg{path: path, err: nil})
 	final := got.(Model)
 
-	if final.mode != modeList {
-		t.Errorf("mode = %v, want modeList", final.mode)
+	if final.mode != modeMain {
+		t.Errorf("mode = %v, want modeMain", final.mode)
 	}
 	if final.err != nil {
 		t.Errorf("err = %v, want nil", final.err)
@@ -159,8 +168,8 @@ func TestHandleEditorFinished_PropagatesError(t *testing.T) {
 	got, _ := m.Update(editorFinishedMsg{path: "/does/not/matter", err: wantErr})
 	final := got.(Model)
 
-	if final.mode != modeList {
-		t.Errorf("mode = %v, want modeList", final.mode)
+	if final.mode != modeMain {
+		t.Errorf("mode = %v, want modeMain", final.mode)
 	}
 	if final.err != wantErr {
 		t.Errorf("err = %v, want %v", final.err, wantErr)

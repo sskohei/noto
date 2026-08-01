@@ -59,7 +59,7 @@ func TestListScreen_ShowsNotesAtStartup(t *testing.T) {
 
 	seedNotes(t, notesDir, idx)
 
-	m := New(cfg, idx)
+	m := skipSplash(New(cfg, idx))
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(80, 24))
 	out := tm.Output()
 
@@ -94,7 +94,7 @@ func TestListScreen_CursorMovesWithJ(t *testing.T) {
 
 	seedNotes(t, notesDir, idx)
 
-	m := New(cfg, idx)
+	m := skipSplash(New(cfg, idx))
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(80, 24))
 	out := tm.Output()
 

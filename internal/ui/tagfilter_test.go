@@ -61,7 +61,7 @@ func newTagFilterTestModel(t *testing.T) (Model, string, *index.DB) {
 
 	seedTagFilterNotes(t, notesDir, idx)
 
-	return New(cfg, idx), notesDir, idx
+	return skipSplash(New(cfg, idx)), notesDir, idx
 }
 
 func TestTagFilterFlow_SelectingTagFiltersList(t *testing.T) {
@@ -73,9 +73,7 @@ func TestTagFilterFlow_SelectingTagFiltersList(t *testing.T) {
 	teatest.WaitFor(t, out, containsBytes("会議メモ"), teatest.WithDuration(2*time.Second))
 
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("t")})
-	teatest.WaitFor(t, out, func(bts []byte) bool {
-		return containsBytes("タグで絞り込み")(bts) && containsBytes("work")(bts)
-	}, teatest.WithDuration(2*time.Second))
+	teatest.WaitFor(t, out, containsBytes("▶ 2:タグ"), teatest.WithDuration(2*time.Second))
 
 	// "life" sorts before "work" alphabetically, so the cursor starts on
 	// "life"; move down once to reach "work".
@@ -84,16 +82,16 @@ func TestTagFilterFlow_SelectingTagFiltersList(t *testing.T) {
 	tm.Send(tea.KeyMsg{Type: tea.KeyEsc})
 
 	// Selecting a tag refreshes the list synchronously (no debounce), so the
-	// filtered indicator appearing back on the list screen is a reliable
+	// filtered indicator folded into the list panel's title is a reliable
 	// checkpoint.
-	teatest.WaitFor(t, out, containsBytes("タグ絞り込み: work"), teatest.WithDuration(2*time.Second))
+	teatest.WaitFor(t, out, containsBytes("タグ: work"), teatest.WithDuration(2*time.Second))
 
 	if err := tm.Quit(); err != nil {
 		t.Fatalf("Quit() returned error: %v", err)
 	}
 	final := tm.FinalModel(t, teatest.WithFinalTimeout(2*time.Second)).(Model)
-	if final.mode != modeList {
-		t.Errorf("final mode = %v, want modeList", final.mode)
+	if final.mode != modeMain {
+		t.Errorf("final mode = %v, want modeMain", final.mode)
 	}
 	if len(final.selectedTags) != 1 || final.selectedTags[0] != "work" {
 		t.Errorf("final.selectedTags = %v, want [work]", final.selectedTags)
@@ -118,11 +116,11 @@ func TestTagFilterFlow_CombinesWithSearch(t *testing.T) {
 	teatest.WaitFor(t, out, containsBytes("会議メモ"), teatest.WithDuration(2*time.Second))
 
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("t")})
-	teatest.WaitFor(t, out, containsBytes("タグで絞り込み"), teatest.WithDuration(2*time.Second))
+	teatest.WaitFor(t, out, containsBytes("▶ 2:タグ"), teatest.WithDuration(2*time.Second))
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")}) // life -> work
 	tm.Send(tea.KeyMsg{Type: tea.KeyEnter})
 	tm.Send(tea.KeyMsg{Type: tea.KeyEsc})
-	teatest.WaitFor(t, out, containsBytes("タグ絞り込み: work"), teatest.WithDuration(2*time.Second))
+	teatest.WaitFor(t, out, containsBytes("タグ: work"), teatest.WithDuration(2*time.Second))
 
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("/")})
 	typeRunes(tm, "作業")
@@ -142,7 +140,8 @@ func TestTagFilterFlow_CombinesWithSearch(t *testing.T) {
 
 func TestUpdateTagFilter_CursorClampsAtBounds(t *testing.T) {
 	m, _, _ := newTagFilterTestModel(t)
-	m.mode = modeTagFilter
+	m.mode = modeMain
+	m.focusedPanel = focusTags
 	m.allTags = []string{"a", "b", "c"}
 
 	got, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
@@ -168,7 +167,8 @@ func TestUpdateTagFilter_CursorClampsAtBounds(t *testing.T) {
 
 func TestUpdateTagFilter_EnterTogglesSelection(t *testing.T) {
 	m, _, _ := newTagFilterTestModel(t)
-	m.mode = modeTagFilter
+	m.mode = modeMain
+	m.focusedPanel = focusTags
 	m.allTags = []string{"life", "work"}
 	m.tagCursor = 1 // "work"
 
@@ -187,15 +187,16 @@ func TestUpdateTagFilter_EnterTogglesSelection(t *testing.T) {
 
 func TestUpdateTagFilter_EscReturnsToListWithoutClearingSelection(t *testing.T) {
 	m, _, _ := newTagFilterTestModel(t)
-	m.mode = modeTagFilter
+	m.mode = modeMain
+	m.focusedPanel = focusTags
 	m.allTags = []string{"work"}
 	m.selectedTags = []string{"work"}
 
 	got, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
 	final := got.(Model)
 
-	if final.mode != modeList {
-		t.Errorf("mode = %v, want modeList", final.mode)
+	if final.mode != modeMain {
+		t.Errorf("mode = %v, want modeMain", final.mode)
 	}
 	if len(final.selectedTags) != 1 || final.selectedTags[0] != "work" {
 		t.Errorf("selectedTags = %v, want [work] preserved", final.selectedTags)

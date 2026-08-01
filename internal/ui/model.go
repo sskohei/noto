@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"time"
+
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -13,21 +15,44 @@ import (
 type mode int
 
 const (
-	// modeList is the note list screen.
-	modeList mode = iota
+	// modeSplash is the startup splash screen.
+	modeSplash mode = iota
+	// modeMain is the main screen: the always-visible search/tags/list
+	// panel layout. Which panel receives input is tracked separately by
+	// Model.focusedPanel.
+	modeMain
 	// modeTitleInput is the new-note title prompt.
 	modeTitleInput
 	// modeEditing is shown while $EDITOR has taken over the terminal via
 	// tea.ExecProcess; View is a no-op in this mode.
 	modeEditing
-	// modeSearch is the search field, focused.
-	modeSearch
-	// modeTagFilter is the tag selection screen.
-	modeTagFilter
 	// modeConfirmDelete is the y/n/Esc delete confirmation prompt.
 	modeConfirmDelete
 	// modeHelp is the keybindings help overlay.
 	modeHelp
+)
+
+// focusPanel identifies which panel of the main screen currently receives
+// non-global key input. It is orthogonal to mode: it only matters while
+// mode == modeMain, and is left untouched by modal detours (title input,
+// editing, delete confirmation, help) so focus is restored automatically
+// once those finish.
+type focusPanel int
+
+const (
+	// focusList is the notes list panel (the default).
+	focusList focusPanel = iota
+	// focusSearch is the search input panel.
+	focusSearch
+	// focusTags is the tag selection panel.
+	focusTags
+)
+
+const (
+	// defaultWidth/defaultHeight are used until the first tea.WindowSizeMsg
+	// arrives, so rendering (and tests that never send one) stays sane.
+	defaultWidth  = 80
+	defaultHeight = 24
 )
 
 // Model is noto's top-level Bubble Tea model.
@@ -44,6 +69,9 @@ type Model struct {
 	allTags          []string
 	tagCursor        int
 	pendingDelete    bool
+	focusedPanel     focusPanel
+	width            int
+	height           int
 	err              error
 }
 
@@ -61,9 +89,11 @@ func New(cfg config.Config, idx *index.DB) Model {
 	m := Model{
 		cfg:    cfg,
 		idx:    idx,
-		mode:   modeList,
+		mode:   modeSplash,
 		input:  input,
 		search: search,
+		width:  defaultWidth,
+		height: defaultHeight,
 	}
 
 	notes, err := app.ListNotes(idx)
@@ -72,6 +102,13 @@ func New(cfg config.Config, idx *index.DB) Model {
 		return m
 	}
 	m.notes = notes
+
+	tags, err := app.ListTags(idx)
+	if err != nil {
+		m.err = err
+		return m
+	}
+	m.allTags = tags
 
 	return m
 }
@@ -84,50 +121,58 @@ func (m Model) refreshNotes() ([]index.NoteSummary, error) {
 }
 
 func (m Model) Init() tea.Cmd {
-	return nil
+	return tea.Tick(splashDuration, func(time.Time) tea.Msg {
+		return splashTimeoutMsg{}
+	})
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if keyMsg, ok := msg.(tea.KeyMsg); ok && keyMsg.String() == "ctrl+c" {
+		return m, tea.Quit
+	}
+
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		return m, nil
 	case editorFinishedMsg:
 		return m.handleEditorFinished(msg)
 	case editSessionFinishedMsg:
 		return m.handleEditSessionFinished(msg)
 	case searchDebounceMsg:
 		return m.handleSearchDebounce(msg)
+	case splashTimeoutMsg:
+		return m.handleSplashTimeout(msg)
 	}
 
 	switch m.mode {
+	case modeSplash:
+		return m.updateSplash(msg)
 	case modeTitleInput:
 		return m.updateTitleInput(msg)
-	case modeSearch:
-		return m.updateSearch(msg)
-	case modeTagFilter:
-		return m.updateTagFilter(msg)
 	case modeConfirmDelete:
 		return m.updateConfirmDelete(msg)
 	case modeHelp:
 		return m.updateHelp(msg)
 	default:
-		return m.updateList(msg)
+		return m.updateMain(msg)
 	}
 }
 
 func (m Model) View() string {
 	switch m.mode {
+	case modeSplash:
+		return m.viewSplash()
 	case modeTitleInput:
 		return m.viewTitleInput()
 	case modeEditing:
 		return ""
-	case modeSearch:
-		return m.viewSearch()
-	case modeTagFilter:
-		return m.viewTagFilter()
 	case modeConfirmDelete:
 		return m.viewConfirmDelete()
 	case modeHelp:
 		return m.viewHelp()
 	default:
-		return m.viewList()
+		return m.viewMain()
 	}
 }

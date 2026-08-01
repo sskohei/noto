@@ -19,32 +19,35 @@ type searchDebounceMsg struct {
 	generation int
 }
 
-func (m Model) updateSearch(msg tea.Msg) (tea.Model, tea.Cmd) {
+// updateSearchPanel handles key input local to the search panel
+// (focusSearch). Unlike other panels, it deliberately does NOT go through
+// updateMain's global-key preamble: every key except enter/esc must reach
+// the textinput untouched, including digits and letters that would
+// otherwise be global shortcuts.
+func (m Model) updateSearchPanel(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if keyMsg, ok := msg.(tea.KeyMsg); ok {
 		switch keyMsg.String() {
 		case "enter":
 			// Keep the query and its filtered results; just return focus
 			// to the list.
-			m.search.Blur()
-			m.mode = modeList
-			return m, nil
+			next, cmd := m.switchFocus(focusList)
+			return next, cmd
 		case "esc":
 			m.search.Reset()
-			m.search.Blur()
-			m.mode = modeList
 			// Invalidate any in-flight debounce tick from prior keystrokes
 			// so it doesn't land after this and re-apply a stale filter.
 			m.searchGeneration++
 
-			notes, err := m.refreshNotes()
+			next, cmd := m.switchFocus(focusList)
+			notes, err := next.refreshNotes()
 			if err != nil {
-				m.err = err
-				return m, nil
+				next.err = err
+				return next, cmd
 			}
-			m.notes = notes
-			m.cursor = 0
-			m.err = nil
-			return m, nil
+			next.notes = notes
+			next.cursor = 0
+			next.err = nil
+			return next, cmd
 		}
 	}
 
@@ -77,7 +80,8 @@ func (m Model) handleSearchDebounce(msg searchDebounceMsg) (tea.Model, tea.Cmd) 
 	return m, nil
 }
 
-func (m Model) viewSearch() string {
-	return m.search.View() + "\n\n" + renderNoteRows(m.notes, m.cursor) +
-		"\n(Enter でフォーカスのみ戻す / Esc でクリア)\n"
+// searchPanelContent renders the search panel's body: just the input box,
+// since the notes list panel (always visible) shows the filtered results.
+func (m Model) searchPanelContent() string {
+	return m.search.View()
 }

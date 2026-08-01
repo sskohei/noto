@@ -17,7 +17,7 @@ func (m Model) updateTitleInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if keyMsg, ok := msg.(tea.KeyMsg); ok {
 		switch keyMsg.String() {
 		case "esc":
-			m.mode = modeList
+			m.mode = modeMain
 			m.input.Blur()
 			return m, nil
 		case "enter":
@@ -39,7 +39,7 @@ func (m Model) startEditing() (tea.Model, tea.Cmd) {
 	_, path, err := app.PrepareNewNote(m.cfg, title)
 	if err != nil {
 		m.err = err
-		m.mode = modeList
+		m.mode = modeMain
 		return m, nil
 	}
 
@@ -53,7 +53,7 @@ func (m Model) startEditing() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleEditorFinished(msg editorFinishedMsg) (tea.Model, tea.Cmd) {
-	m.mode = modeList
+	m.mode = modeMain
 
 	if msg.err != nil {
 		m.err = msg.err

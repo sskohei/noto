@@ -17,7 +17,7 @@ func TestHelpFlow_QuestionMarkOpensAndCloses(t *testing.T) {
 	teatest.WaitFor(t, out, containsBytes("n: 新規メモ"), teatest.WithDuration(2*time.Second))
 
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")})
-	teatest.WaitFor(t, out, containsBytes("ヘルプを閉じて一覧に戻る"), teatest.WithDuration(2*time.Second))
+	teatest.WaitFor(t, out, containsBytes("ヘルプを閉じてメイン画面に戻る"), teatest.WithDuration(2*time.Second))
 
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")})
 	teatest.WaitFor(t, out, containsBytes("n: 新規メモ"), teatest.WithDuration(2*time.Second))
@@ -26,8 +26,8 @@ func TestHelpFlow_QuestionMarkOpensAndCloses(t *testing.T) {
 		t.Fatalf("Quit() returned error: %v", err)
 	}
 	final := tm.FinalModel(t, teatest.WithFinalTimeout(2*time.Second)).(Model)
-	if final.mode != modeList {
-		t.Errorf("final mode = %v, want modeList", final.mode)
+	if final.mode != modeMain {
+		t.Errorf("final mode = %v, want modeMain", final.mode)
 	}
 }
 
@@ -40,7 +40,7 @@ func TestHelpFlow_EscCloses(t *testing.T) {
 	teatest.WaitFor(t, out, containsBytes("n: 新規メモ"), teatest.WithDuration(2*time.Second))
 
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")})
-	teatest.WaitFor(t, out, containsBytes("ヘルプを閉じて一覧に戻る"), teatest.WithDuration(2*time.Second))
+	teatest.WaitFor(t, out, containsBytes("ヘルプを閉じてメイン画面に戻る"), teatest.WithDuration(2*time.Second))
 
 	tm.Send(tea.KeyMsg{Type: tea.KeyEsc})
 	teatest.WaitFor(t, out, containsBytes("n: 新規メモ"), teatest.WithDuration(2*time.Second))
@@ -49,8 +49,8 @@ func TestHelpFlow_EscCloses(t *testing.T) {
 		t.Fatalf("Quit() returned error: %v", err)
 	}
 	final := tm.FinalModel(t, teatest.WithFinalTimeout(2*time.Second)).(Model)
-	if final.mode != modeList {
-		t.Errorf("final mode = %v, want modeList", final.mode)
+	if final.mode != modeMain {
+		t.Errorf("final mode = %v, want modeMain", final.mode)
 	}
 }
 
@@ -63,20 +63,20 @@ func TestHelpFlow_QClosesWithoutQuittingApp(t *testing.T) {
 	teatest.WaitFor(t, out, containsBytes("n: 新規メモ"), teatest.WithDuration(2*time.Second))
 
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")})
-	teatest.WaitFor(t, out, containsBytes("ヘルプを閉じて一覧に戻る"), teatest.WithDuration(2*time.Second))
+	teatest.WaitFor(t, out, containsBytes("ヘルプを閉じてメイン画面に戻る"), teatest.WithDuration(2*time.Second))
 
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
 	teatest.WaitFor(t, out, containsBytes("n: 新規メモ"), teatest.WithDuration(2*time.Second))
 
 	// If "q" had quit the whole program instead of just closing the help
 	// overlay, this explicit Quit would be redundant but harmless; the real
-	// assertion is that the model is still alive and back in modeList.
+	// assertion is that the model is still alive and back in modeMain.
 	if err := tm.Quit(); err != nil {
 		t.Fatalf("Quit() returned error: %v", err)
 	}
 	final := tm.FinalModel(t, teatest.WithFinalTimeout(2*time.Second)).(Model)
-	if final.mode != modeList {
-		t.Errorf("final mode = %v, want modeList", final.mode)
+	if final.mode != modeMain {
+		t.Errorf("final mode = %v, want modeMain", final.mode)
 	}
 }
 
