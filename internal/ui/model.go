@@ -4,6 +4,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"noto/internal/app"
 	"noto/internal/config"
 	"noto/internal/index"
 )
@@ -23,25 +24,37 @@ const (
 
 // Model is noto's top-level Bubble Tea model.
 type Model struct {
-	cfg   config.Config
-	idx   *index.DB
-	mode  mode
-	input textinput.Model
-	err   error
+	cfg    config.Config
+	idx    *index.DB
+	mode   mode
+	input  textinput.Model
+	notes  []index.NoteSummary
+	cursor int
+	err    error
 }
 
-// New builds the initial Model. idx must already be open; the caller owns
-// its lifecycle (opening/closing).
+// New builds the initial Model, loading the current note list from idx.
+// idx must already be open (and, in practice, freshly Sync'd); the caller
+// owns its lifecycle (opening/closing).
 func New(cfg config.Config, idx *index.DB) Model {
 	input := textinput.New()
 	input.Placeholder = "タイトル(空欄可)"
 
-	return Model{
+	m := Model{
 		cfg:   cfg,
 		idx:   idx,
 		mode:  modeList,
 		input: input,
 	}
+
+	notes, err := app.ListNotes(idx)
+	if err != nil {
+		m.err = err
+		return m
+	}
+	m.notes = notes
+
+	return m
 }
 
 func (m Model) Init() tea.Cmd {
