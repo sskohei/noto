@@ -34,17 +34,66 @@ func (db *DB) List() ([]NoteSummary, error) {
 // and English. At the scale of a personal note collection, a full scan via
 // LIKE is fast enough that FTS5 ranking isn't needed.
 func (db *DB) Search(q string) ([]NoteSummary, error) {
-	if q == "" {
+	return db.FilterNotes(q, nil)
+}
+
+// Tags returns every distinct tag present in the index, sorted
+// alphabetically.
+func (db *DB) Tags() ([]string, error) {
+	rows, err := db.conn.Query(`SELECT DISTINCT tag FROM note_tags ORDER BY tag`)
+	if err != nil {
+		return nil, fmt.Errorf("index: list distinct tags: %w", err)
+	}
+	defer rows.Close()
+
+	var tags []string
+	for rows.Next() {
+		var tag string
+		if err := rows.Scan(&tag); err != nil {
+			return nil, fmt.Errorf("index: list distinct tags: %w", err)
+		}
+		tags = append(tags, tag)
+	}
+	return tags, rows.Err()
+}
+
+// FilterNotes returns indexed notes matching q (see Search) and, if tags is
+// non-empty, having every tag in tags (AND), ordered by most recently
+// updated first. An empty q and no tags behave like List.
+func (db *DB) FilterNotes(q string, tags []string) ([]NoteSummary, error) {
+	if q == "" && len(tags) == 0 {
 		return db.List()
 	}
 
-	like := "%" + escapeLike(q) + "%"
-	return db.query(`
+	var (
+		conditions []string
+		args       []any
+	)
+
+	if q != "" {
+		like := "%" + escapeLike(q) + "%"
+		conditions = append(conditions, `(f.title LIKE ? ESCAPE '\' OR f.body LIKE ? ESCAPE '\' OR f.tags LIKE ? ESCAPE '\')`)
+		args = append(args, like, like, like)
+	}
+
+	if len(tags) > 0 {
+		placeholders := strings.TrimSuffix(strings.Repeat("?,", len(tags)), ",")
+		conditions = append(conditions, fmt.Sprintf(
+			`n.id IN (SELECT note_id FROM note_tags WHERE tag IN (%s) GROUP BY note_id HAVING COUNT(DISTINCT tag) = ?)`,
+			placeholders))
+		for _, tag := range tags {
+			args = append(args, tag)
+		}
+		args = append(args, len(tags))
+	}
+
+	sqlQuery := `
 		SELECT n.id, n.path, n.title, n.updated_at
 		FROM notes n
 		JOIN notes_fts f ON f.id = n.id
-		WHERE f.title LIKE ? ESCAPE '\' OR f.body LIKE ? ESCAPE '\' OR f.tags LIKE ? ESCAPE '\'
-		ORDER BY n.updated_at DESC`, like, like, like)
+		WHERE ` + strings.Join(conditions, " AND ") + `
+		ORDER BY n.updated_at DESC`
+	return db.query(sqlQuery, args...)
 }
 
 // escapeLike escapes \, %, and _ so q is matched literally when used with
