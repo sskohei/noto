@@ -26,6 +26,8 @@ const (
 	modeTagFilter
 	// modeConfirmDelete is the y/n/Esc delete confirmation prompt.
 	modeConfirmDelete
+	// modeHelp is the keybindings help overlay.
+	modeHelp
 )
 
 // Model is noto's top-level Bubble Tea model.
@@ -104,6 +106,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateTagFilter(msg)
 	case modeConfirmDelete:
 		return m.updateConfirmDelete(msg)
+	case modeHelp:
+		return m.updateHelp(msg)
 	default:
 		return m.updateList(msg)
 	}
@@ -121,6 +125,8 @@ func (m Model) View() string {
 		return m.viewTagFilter()
 	case modeConfirmDelete:
 		return m.viewConfirmDelete()
+	case modeHelp:
+		return m.viewHelp()
 	default:
 		return m.viewList()
 	}
