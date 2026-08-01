@@ -67,6 +67,10 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.pendingDelete = true
 		return m, nil
+	case "?":
+		m.mode = modeHelp
+		m.err = nil
+		return m, nil
 	case "q", "ctrl+c":
 		return m, tea.Quit
 	}
@@ -92,7 +96,7 @@ func (m Model) viewList() string {
 
 	b.WriteString(renderNoteRows(m.notes, m.cursor))
 
-	b.WriteString("\nn: 新規メモ  /: 検索  t: タグ  dd: 削除  q: 終了\n")
+	b.WriteString("\nn: 新規メモ  /: 検索  t: タグ  dd: 削除  ?: ヘルプ  q: 終了\n")
 	if m.err != nil {
 		b.WriteString("\nerror: " + m.err.Error() + "\n")
 	}
