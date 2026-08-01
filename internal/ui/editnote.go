@@ -45,7 +45,7 @@ func (m Model) handleEditSessionFinished(msg editSessionFinishedMsg) (tea.Model,
 		return m, nil
 	}
 
-	notes, err := app.ListNotes(m.idx)
+	notes, err := m.refreshNotes()
 	if err != nil {
 		m.err = err
 		return m, nil

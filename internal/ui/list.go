@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"noto/internal/index"
 )
 
 // updateList handles key input for modeList.
@@ -32,6 +34,10 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.input.Focus()
 	case "enter", "e":
 		return m.startEditingExisting()
+	case "/":
+		m.mode = modeSearch
+		m.err = nil
+		return m, m.search.Focus()
 	case "q", "ctrl+c":
 		return m, tea.Quit
 	}
@@ -43,13 +49,31 @@ func (m Model) viewList() string {
 	var b strings.Builder
 	b.WriteString("noto\n\n")
 
-	if len(m.notes) == 0 {
-		b.WriteString("(メモがありません。n で新規作成)\n")
+	if query := m.search.Value(); query != "" {
+		fmt.Fprintf(&b, "絞り込み中: %q (/ で編集, Esc で解除)\n\n", query)
 	}
-	for i, n := range m.notes {
-		cursor := "  "
-		if i == m.cursor {
-			cursor = "> "
+
+	b.WriteString(renderNoteRows(m.notes, m.cursor))
+
+	b.WriteString("\nn: 新規メモ  /: 検索  q: 終了\n")
+	if m.err != nil {
+		b.WriteString("\nerror: " + m.err.Error() + "\n")
+	}
+	return b.String()
+}
+
+// renderNoteRows renders notes as a cursor-marked list, one note per line.
+// Shared between the list and search screens.
+func renderNoteRows(notes []index.NoteSummary, cursor int) string {
+	if len(notes) == 0 {
+		return "(メモがありません。n で新規作成)\n"
+	}
+
+	var b strings.Builder
+	for i, n := range notes {
+		mark := "  "
+		if i == cursor {
+			mark = "> "
 		}
 
 		title := n.Title
@@ -62,12 +86,7 @@ func (m Model) viewList() string {
 			tags = " [" + strings.Join(n.Tags, ", ") + "]"
 		}
 
-		fmt.Fprintf(&b, "%s%s%s  %s\n", cursor, title, tags, n.UpdatedAt.Format("2006-01-02 15:04"))
-	}
-
-	b.WriteString("\nn: 新規メモ  q: 終了\n")
-	if m.err != nil {
-		b.WriteString("\nerror: " + m.err.Error() + "\n")
+		fmt.Fprintf(&b, "%s%s%s  %s\n", mark, title, tags, n.UpdatedAt.Format("2006-01-02 15:04"))
 	}
 	return b.String()
 }

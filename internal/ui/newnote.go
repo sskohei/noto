@@ -65,7 +65,7 @@ func (m Model) handleEditorFinished(msg editorFinishedMsg) (tea.Model, tea.Cmd) 
 		return m, nil
 	}
 
-	notes, err := app.ListNotes(m.idx)
+	notes, err := m.refreshNotes()
 	if err != nil {
 		m.err = err
 		return m, nil
