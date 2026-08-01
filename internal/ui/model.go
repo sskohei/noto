@@ -24,6 +24,8 @@ const (
 	modeSearch
 	// modeTagFilter is the tag selection screen.
 	modeTagFilter
+	// modeConfirmDelete is the y/n/Esc delete confirmation prompt.
+	modeConfirmDelete
 )
 
 // Model is noto's top-level Bubble Tea model.
@@ -39,6 +41,7 @@ type Model struct {
 	selectedTags     []string
 	allTags          []string
 	tagCursor        int
+	pendingDelete    bool
 	err              error
 }
 
@@ -99,6 +102,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateSearch(msg)
 	case modeTagFilter:
 		return m.updateTagFilter(msg)
+	case modeConfirmDelete:
+		return m.updateConfirmDelete(msg)
 	default:
 		return m.updateList(msg)
 	}
@@ -114,6 +119,8 @@ func (m Model) View() string {
 		return m.viewSearch()
 	case modeTagFilter:
 		return m.viewTagFilter()
+	case modeConfirmDelete:
+		return m.viewConfirmDelete()
 	default:
 		return m.viewList()
 	}

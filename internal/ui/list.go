@@ -17,7 +17,12 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	switch keyMsg.String() {
+	key := keyMsg.String()
+	if m.pendingDelete && key != "d" {
+		m.pendingDelete = false
+	}
+
+	switch key {
 	case "j", "down":
 		if m.cursor < len(m.notes)-1 {
 			m.cursor++
@@ -50,6 +55,18 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.mode = modeTagFilter
 		m.err = nil
 		return m, nil
+	case "d":
+		if m.pendingDelete {
+			m.pendingDelete = false
+			if len(m.notes) == 0 {
+				return m, nil
+			}
+			m.mode = modeConfirmDelete
+			m.err = nil
+			return m, nil
+		}
+		m.pendingDelete = true
+		return m, nil
 	case "q", "ctrl+c":
 		return m, tea.Quit
 	}
@@ -69,9 +86,13 @@ func (m Model) viewList() string {
 		fmt.Fprintf(&b, "タグ絞り込み: %s (t で変更)\n\n", strings.Join(m.selectedTags, ", "))
 	}
 
+	if m.pendingDelete {
+		b.WriteString("d をもう一度押すと削除\n\n")
+	}
+
 	b.WriteString(renderNoteRows(m.notes, m.cursor))
 
-	b.WriteString("\nn: 新規メモ  /: 検索  t: タグ  q: 終了\n")
+	b.WriteString("\nn: 新規メモ  /: 検索  t: タグ  dd: 削除  q: 終了\n")
 	if m.err != nil {
 		b.WriteString("\nerror: " + m.err.Error() + "\n")
 	}

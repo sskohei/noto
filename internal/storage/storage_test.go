@@ -143,3 +143,36 @@ func TestReadMissingFile(t *testing.T) {
 		t.Fatal("Read() of a missing file should return an error")
 	}
 }
+
+func TestDeleteRemovesFile(t *testing.T) {
+	dir := t.TempDir()
+	note := Note{
+		ID:        "018f2e4a-0000-0000-0000-000000000000",
+		Title:     "test",
+		CreatedAt: mustParseTime(t, "2026-01-01T00:00:00Z"),
+		UpdatedAt: mustParseTime(t, "2026-01-01T00:00:00Z"),
+	}
+
+	path, err := GeneratePath(dir, note)
+	if err != nil {
+		t.Fatalf("GeneratePath() returned error: %v", err)
+	}
+	if err := Write(path, note); err != nil {
+		t.Fatalf("Write() returned error: %v", err)
+	}
+
+	if err := Delete(path); err != nil {
+		t.Fatalf("Delete() returned error: %v", err)
+	}
+
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Errorf("expected file to be removed at %s, stat err = %v", path, err)
+	}
+}
+
+func TestDeleteMissingFile(t *testing.T) {
+	err := Delete(filepath.Join(t.TempDir(), "missing.md"))
+	if err == nil {
+		t.Fatal("Delete() of a missing file should return an error")
+	}
+}

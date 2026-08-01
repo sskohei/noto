@@ -60,6 +60,14 @@ func List(dir string) ([]string, error) {
 	return paths, nil
 }
 
+// Delete removes the note file at path.
+func Delete(path string) error {
+	if err := os.Remove(path); err != nil {
+		return fmt.Errorf("storage: delete %s: %w", path, err)
+	}
+	return nil
+}
+
 // GeneratePath returns a path in dir for a new note n, based on
 // FileName(n). If that name is already taken, a "-2", "-3", ... suffix is
 // appended before the extension until a free path is found.
