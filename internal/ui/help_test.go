@@ -17,7 +17,7 @@ func TestHelpFlow_QuestionMarkOpensAndCloses(t *testing.T) {
 	teatest.WaitFor(t, out, containsBytes("n: 新規メモ"), teatest.WithDuration(2*time.Second))
 
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")})
-	teatest.WaitFor(t, out, containsBytes("ヘルプを閉じて一覧に戻る"), teatest.WithDuration(2*time.Second))
+	teatest.WaitFor(t, out, containsBytes("ヘルプを閉じてメイン画面に戻る"), teatest.WithDuration(2*time.Second))
 
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")})
 	teatest.WaitFor(t, out, containsBytes("n: 新規メモ"), teatest.WithDuration(2*time.Second))
@@ -40,7 +40,7 @@ func TestHelpFlow_EscCloses(t *testing.T) {
 	teatest.WaitFor(t, out, containsBytes("n: 新規メモ"), teatest.WithDuration(2*time.Second))
 
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")})
-	teatest.WaitFor(t, out, containsBytes("ヘルプを閉じて一覧に戻る"), teatest.WithDuration(2*time.Second))
+	teatest.WaitFor(t, out, containsBytes("ヘルプを閉じてメイン画面に戻る"), teatest.WithDuration(2*time.Second))
 
 	tm.Send(tea.KeyMsg{Type: tea.KeyEsc})
 	teatest.WaitFor(t, out, containsBytes("n: 新規メモ"), teatest.WithDuration(2*time.Second))
@@ -63,7 +63,7 @@ func TestHelpFlow_QClosesWithoutQuittingApp(t *testing.T) {
 	teatest.WaitFor(t, out, containsBytes("n: 新規メモ"), teatest.WithDuration(2*time.Second))
 
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")})
-	teatest.WaitFor(t, out, containsBytes("ヘルプを閉じて一覧に戻る"), teatest.WithDuration(2*time.Second))
+	teatest.WaitFor(t, out, containsBytes("ヘルプを閉じてメイン画面に戻る"), teatest.WithDuration(2*time.Second))
 
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
 	teatest.WaitFor(t, out, containsBytes("n: 新規メモ"), teatest.WithDuration(2*time.Second))
