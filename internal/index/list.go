@@ -2,6 +2,7 @@ package index
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -17,9 +18,48 @@ type NoteSummary struct {
 
 // List returns all indexed notes, ordered by most recently updated first.
 func (db *DB) List() ([]NoteSummary, error) {
-	rows, err := db.conn.Query(`SELECT id, path, title, updated_at FROM notes ORDER BY updated_at DESC`)
+	return db.query(`SELECT id, path, title, updated_at FROM notes ORDER BY updated_at DESC`)
+}
+
+// Search returns indexed notes whose title, body, or tags contain q
+// (case-insensitive substring match), ordered by most recently updated
+// first. An empty q behaves like List.
+//
+// This deliberately uses LIKE against notes_fts rather than an FTS5 MATCH
+// query: with the unicode61 tokenizer, a Japanese field with no whitespace
+// becomes a single token, so MATCH's prefix search only ever matches
+// whole-field prefixes, not substrings buried mid-field. LIKE scans the
+// stored column text directly regardless of tokenizer, giving correct
+// substring matches (including single-character queries) in both Japanese
+// and English. At the scale of a personal note collection, a full scan via
+// LIKE is fast enough that FTS5 ranking isn't needed.
+func (db *DB) Search(q string) ([]NoteSummary, error) {
+	if q == "" {
+		return db.List()
+	}
+
+	like := "%" + escapeLike(q) + "%"
+	return db.query(`
+		SELECT n.id, n.path, n.title, n.updated_at
+		FROM notes n
+		JOIN notes_fts f ON f.id = n.id
+		WHERE f.title LIKE ? ESCAPE '\' OR f.body LIKE ? ESCAPE '\' OR f.tags LIKE ? ESCAPE '\'
+		ORDER BY n.updated_at DESC`, like, like, like)
+}
+
+// escapeLike escapes \, %, and _ so q is matched literally when used with
+// a LIKE ... ESCAPE '\' pattern.
+func escapeLike(q string) string {
+	r := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+	return r.Replace(q)
+}
+
+// query runs a SELECT (id, path, title, updated_at) statement and merges
+// in each note's tags.
+func (db *DB) query(sql string, args ...any) ([]NoteSummary, error) {
+	rows, err := db.conn.Query(sql, args...)
 	if err != nil {
-		return nil, fmt.Errorf("index: list notes: %w", err)
+		return nil, fmt.Errorf("index: query notes: %w", err)
 	}
 	defer rows.Close()
 
@@ -27,7 +67,7 @@ func (db *DB) List() ([]NoteSummary, error) {
 	for rows.Next() {
 		var id, path, title, updatedAt string
 		if err := rows.Scan(&id, &path, &title, &updatedAt); err != nil {
-			return nil, fmt.Errorf("index: list notes: %w", err)
+			return nil, fmt.Errorf("index: query notes: %w", err)
 		}
 
 		t, err := time.Parse(time.RFC3339, updatedAt)
@@ -38,7 +78,7 @@ func (db *DB) List() ([]NoteSummary, error) {
 		summaries = append(summaries, NoteSummary{ID: id, Path: path, Title: title, UpdatedAt: t})
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("index: list notes: %w", err)
+		return nil, fmt.Errorf("index: query notes: %w", err)
 	}
 
 	tags, err := db.tagsByNoteID()

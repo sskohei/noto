@@ -20,17 +20,21 @@ const (
 	// modeEditing is shown while $EDITOR has taken over the terminal via
 	// tea.ExecProcess; View is a no-op in this mode.
 	modeEditing
+	// modeSearch is the search field, focused.
+	modeSearch
 )
 
 // Model is noto's top-level Bubble Tea model.
 type Model struct {
-	cfg    config.Config
-	idx    *index.DB
-	mode   mode
-	input  textinput.Model
-	notes  []index.NoteSummary
-	cursor int
-	err    error
+	cfg              config.Config
+	idx              *index.DB
+	mode             mode
+	input            textinput.Model
+	search           textinput.Model
+	searchGeneration int
+	notes            []index.NoteSummary
+	cursor           int
+	err              error
 }
 
 // New builds the initial Model, loading the current note list from idx.
@@ -40,11 +44,16 @@ func New(cfg config.Config, idx *index.DB) Model {
 	input := textinput.New()
 	input.Placeholder = "タイトル(空欄可)"
 
+	search := textinput.New()
+	search.Placeholder = "検索"
+	search.Prompt = "/ "
+
 	m := Model{
-		cfg:   cfg,
-		idx:   idx,
-		mode:  modeList,
-		input: input,
+		cfg:    cfg,
+		idx:    idx,
+		mode:   modeList,
+		input:  input,
+		search: search,
 	}
 
 	notes, err := app.ListNotes(idx)
@@ -57,6 +66,16 @@ func New(cfg config.Config, idx *index.DB) Model {
 	return m
 }
 
+// refreshNotes re-fetches m.notes, honoring the current search query (if
+// any) so that creating or editing a note while filtered doesn't silently
+// drop back to the unfiltered list.
+func (m Model) refreshNotes() ([]index.NoteSummary, error) {
+	if m.search.Value() == "" {
+		return app.ListNotes(m.idx)
+	}
+	return app.SearchNotes(m.idx, m.search.Value())
+}
+
 func (m Model) Init() tea.Cmd {
 	return nil
 }
@@ -67,11 +86,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleEditorFinished(msg)
 	case editSessionFinishedMsg:
 		return m.handleEditSessionFinished(msg)
+	case searchDebounceMsg:
+		return m.handleSearchDebounce(msg)
 	}
 
 	switch m.mode {
 	case modeTitleInput:
 		return m.updateTitleInput(msg)
+	case modeSearch:
+		return m.updateSearch(msg)
 	default:
 		return m.updateList(msg)
 	}
@@ -83,6 +106,8 @@ func (m Model) View() string {
 		return m.viewTitleInput()
 	case modeEditing:
 		return ""
+	case modeSearch:
+		return m.viewSearch()
 	default:
 		return m.viewList()
 	}
