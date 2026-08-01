@@ -22,6 +22,8 @@ const (
 	modeEditing
 	// modeSearch is the search field, focused.
 	modeSearch
+	// modeTagFilter is the tag selection screen.
+	modeTagFilter
 )
 
 // Model is noto's top-level Bubble Tea model.
@@ -34,6 +36,9 @@ type Model struct {
 	searchGeneration int
 	notes            []index.NoteSummary
 	cursor           int
+	selectedTags     []string
+	allTags          []string
+	tagCursor        int
 	err              error
 }
 
@@ -66,14 +71,11 @@ func New(cfg config.Config, idx *index.DB) Model {
 	return m
 }
 
-// refreshNotes re-fetches m.notes, honoring the current search query (if
-// any) so that creating or editing a note while filtered doesn't silently
-// drop back to the unfiltered list.
+// refreshNotes re-fetches m.notes, honoring the current search query and
+// selected tags (if any) so that creating or editing a note while filtered
+// doesn't silently drop back to the unfiltered list.
 func (m Model) refreshNotes() ([]index.NoteSummary, error) {
-	if m.search.Value() == "" {
-		return app.ListNotes(m.idx)
-	}
-	return app.SearchNotes(m.idx, m.search.Value())
+	return app.FilterNotes(m.idx, m.search.Value(), m.selectedTags)
 }
 
 func (m Model) Init() tea.Cmd {
@@ -95,6 +97,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateTitleInput(msg)
 	case modeSearch:
 		return m.updateSearch(msg)
+	case modeTagFilter:
+		return m.updateTagFilter(msg)
 	default:
 		return m.updateList(msg)
 	}
@@ -108,6 +112,8 @@ func (m Model) View() string {
 		return ""
 	case modeSearch:
 		return m.viewSearch()
+	case modeTagFilter:
+		return m.viewTagFilter()
 	default:
 		return m.viewList()
 	}

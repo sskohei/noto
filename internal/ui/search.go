@@ -36,7 +36,7 @@ func (m Model) updateSearch(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// so it doesn't land after this and re-apply a stale filter.
 			m.searchGeneration++
 
-			notes, err := app.ListNotes(m.idx)
+			notes, err := m.refreshNotes()
 			if err != nil {
 				m.err = err
 				return m, nil
@@ -66,7 +66,7 @@ func (m Model) handleSearchDebounce(msg searchDebounceMsg) (tea.Model, tea.Cmd) 
 		return m, nil // superseded by further typing
 	}
 
-	notes, err := app.SearchNotes(m.idx, msg.query)
+	notes, err := app.FilterNotes(m.idx, msg.query, m.selectedTags)
 	if err != nil {
 		m.err = err
 		return m, nil

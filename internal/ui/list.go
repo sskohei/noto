@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"noto/internal/app"
 	"noto/internal/index"
 )
 
@@ -38,6 +39,17 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.mode = modeSearch
 		m.err = nil
 		return m, m.search.Focus()
+	case "t":
+		tags, err := app.ListTags(m.idx)
+		if err != nil {
+			m.err = err
+			return m, nil
+		}
+		m.allTags = tags
+		m.tagCursor = 0
+		m.mode = modeTagFilter
+		m.err = nil
+		return m, nil
 	case "q", "ctrl+c":
 		return m, tea.Quit
 	}
@@ -53,9 +65,13 @@ func (m Model) viewList() string {
 		fmt.Fprintf(&b, "絞り込み中: %q (/ で編集, Esc で解除)\n\n", query)
 	}
 
+	if len(m.selectedTags) > 0 {
+		fmt.Fprintf(&b, "タグ絞り込み: %s (t で変更)\n\n", strings.Join(m.selectedTags, ", "))
+	}
+
 	b.WriteString(renderNoteRows(m.notes, m.cursor))
 
-	b.WriteString("\nn: 新規メモ  /: 検索  q: 終了\n")
+	b.WriteString("\nn: 新規メモ  /: 検索  t: タグ  q: 終了\n")
 	if m.err != nil {
 		b.WriteString("\nerror: " + m.err.Error() + "\n")
 	}
