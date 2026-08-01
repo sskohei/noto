@@ -74,6 +74,27 @@ func TestListIncludesTags(t *testing.T) {
 	}
 }
 
+func TestListIncludesPath(t *testing.T) {
+	notesDir := t.TempDir()
+	wantPath := writeSummaryNote(t, notesDir, "018f2e4a-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "note", nil, "2026-01-01T00:00:00Z")
+
+	db := openListTestDB(t)
+	if err := db.Sync(notesDir); err != nil {
+		t.Fatalf("Sync() returned error: %v", err)
+	}
+
+	got, err := db.List()
+	if err != nil {
+		t.Fatalf("List() returned error: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("List() returned %d notes, want 1", len(got))
+	}
+	if got[0].Path != wantPath {
+		t.Errorf("List()[0].Path = %q, want %q", got[0].Path, wantPath)
+	}
+}
+
 func TestListEmptyIndex(t *testing.T) {
 	db := openListTestDB(t)
 
@@ -96,7 +117,7 @@ func openListTestDB(t *testing.T) *DB {
 	return db
 }
 
-func writeSummaryNote(t *testing.T, dir, id, title string, tags []string, updatedAt string) {
+func writeSummaryNote(t *testing.T, dir, id, title string, tags []string, updatedAt string) string {
 	t.Helper()
 	ts, err := time.Parse(time.RFC3339, updatedAt)
 	if err != nil {
@@ -117,4 +138,5 @@ func writeSummaryNote(t *testing.T, dir, id, title string, tags []string, update
 	if err := storage.Write(path, n); err != nil {
 		t.Fatalf("storage.Write() returned error: %v", err)
 	}
+	return path
 }
