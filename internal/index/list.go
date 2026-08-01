@@ -9,6 +9,7 @@ import (
 // in the note list.
 type NoteSummary struct {
 	ID        string
+	Path      string
 	Title     string
 	Tags      []string
 	UpdatedAt time.Time
@@ -16,7 +17,7 @@ type NoteSummary struct {
 
 // List returns all indexed notes, ordered by most recently updated first.
 func (db *DB) List() ([]NoteSummary, error) {
-	rows, err := db.conn.Query(`SELECT id, title, updated_at FROM notes ORDER BY updated_at DESC`)
+	rows, err := db.conn.Query(`SELECT id, path, title, updated_at FROM notes ORDER BY updated_at DESC`)
 	if err != nil {
 		return nil, fmt.Errorf("index: list notes: %w", err)
 	}
@@ -24,8 +25,8 @@ func (db *DB) List() ([]NoteSummary, error) {
 
 	var summaries []NoteSummary
 	for rows.Next() {
-		var id, title, updatedAt string
-		if err := rows.Scan(&id, &title, &updatedAt); err != nil {
+		var id, path, title, updatedAt string
+		if err := rows.Scan(&id, &path, &title, &updatedAt); err != nil {
 			return nil, fmt.Errorf("index: list notes: %w", err)
 		}
 
@@ -34,7 +35,7 @@ func (db *DB) List() ([]NoteSummary, error) {
 			return nil, fmt.Errorf("index: parse updated_at for %s: %w", id, err)
 		}
 
-		summaries = append(summaries, NoteSummary{ID: id, Title: title, UpdatedAt: t})
+		summaries = append(summaries, NoteSummary{ID: id, Path: path, Title: title, UpdatedAt: t})
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("index: list notes: %w", err)

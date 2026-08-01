@@ -30,6 +30,8 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.err = nil
 		m.input.Reset()
 		return m, m.input.Focus()
+	case "enter", "e":
+		return m.startEditingExisting()
 	case "q", "ctrl+c":
 		return m, tea.Quit
 	}

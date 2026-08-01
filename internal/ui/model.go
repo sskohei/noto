@@ -13,7 +13,7 @@ import (
 type mode int
 
 const (
-	// modeList is the (currently placeholder) note list screen.
+	// modeList is the note list screen.
 	modeList mode = iota
 	// modeTitleInput is the new-note title prompt.
 	modeTitleInput
@@ -62,8 +62,11 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if efm, ok := msg.(editorFinishedMsg); ok {
-		return m.handleEditorFinished(efm)
+	switch msg := msg.(type) {
+	case editorFinishedMsg:
+		return m.handleEditorFinished(msg)
+	case editSessionFinishedMsg:
+		return m.handleEditSessionFinished(msg)
 	}
 
 	switch m.mode {
