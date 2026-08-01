@@ -103,6 +103,13 @@ func New(cfg config.Config, idx *index.DB) Model {
 	}
 	m.notes = notes
 
+	tags, err := app.ListTags(idx)
+	if err != nil {
+		m.err = err
+		return m
+	}
+	m.allTags = tags
+
 	return m
 }
 

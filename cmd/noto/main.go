@@ -42,7 +42,7 @@ func run() error {
 		return fmt.Errorf("sync index: %w", err)
 	}
 
-	_, err = tea.NewProgram(ui.New(cfg, idx)).Run()
+	_, err = tea.NewProgram(ui.New(cfg, idx), tea.WithAltScreen()).Run()
 	if err != nil {
 		return fmt.Errorf("run program: %w", err)
 	}

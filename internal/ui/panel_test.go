@@ -1,11 +1,15 @@
 package ui
 
 import (
+	"path/filepath"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"noto/internal/config"
 	"noto/internal/index"
+	"noto/internal/storage"
 )
 
 func TestUpdateMain_DigitKeysSwitchFocus(t *testing.T) {
@@ -81,6 +85,35 @@ func TestUpdateMain_PendingDeleteResetsOnPanelSwitch(t *testing.T) {
 	}
 	if final.mode == modeConfirmDelete {
 		t.Error("mode = modeConfirmDelete, want no delete confirmation triggered by the panel switch")
+	}
+}
+
+func TestNew_LoadsTagsEagerlyWithoutFocusingTagsPanel(t *testing.T) {
+	notesDir := t.TempDir()
+	cfg := config.Config{NotesDir: notesDir}
+	idx, err := index.Open(filepath.Join(t.TempDir(), "index.db"))
+	if err != nil {
+		t.Fatalf("index.Open() returned error: %v", err)
+	}
+	t.Cleanup(func() { idx.Close() })
+
+	now := time.Now()
+	n := storage.Note{ID: "018f2e4a-aaaa-aaaa-aaaa-aaaaaaaaaaaa", Title: "note", Tags: []string{"work"}, CreatedAt: now, UpdatedAt: now}
+	path, err := storage.GeneratePath(notesDir, n)
+	if err != nil {
+		t.Fatalf("storage.GeneratePath() returned error: %v", err)
+	}
+	if err := storage.Write(path, n); err != nil {
+		t.Fatalf("storage.Write() returned error: %v", err)
+	}
+	if err := idx.Sync(notesDir); err != nil {
+		t.Fatalf("Sync() returned error: %v", err)
+	}
+
+	m := New(cfg, idx)
+
+	if len(m.allTags) != 1 || m.allTags[0] != "work" {
+		t.Errorf("allTags after New() = %v, want [work] without ever focusing the tags panel", m.allTags)
 	}
 }
 
