@@ -91,7 +91,7 @@ func New(cfg config.Config, idx *index.DB) Model {
 	m := Model{
 		cfg:    cfg,
 		idx:    idx,
-		mode:   modeList,
+		mode:   modeSplash,
 		input:  input,
 		search: search,
 		width:  defaultWidth,

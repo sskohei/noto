@@ -44,7 +44,7 @@ func TestEditFlow_FullRoundTrip(t *testing.T) {
 		t.Fatalf("Sync() returned error: %v", err)
 	}
 
-	m := New(cfg, idx)
+	m := skipSplash(New(cfg, idx))
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(80, 24))
 	out := tm.Output()
 
@@ -106,7 +106,7 @@ func TestEditFlow_EKeyAlsoStartsEditing(t *testing.T) {
 		t.Fatalf("Sync() returned error: %v", err)
 	}
 
-	m := New(cfg, idx)
+	m := skipSplash(New(cfg, idx))
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(80, 24))
 	out := tm.Output()
 

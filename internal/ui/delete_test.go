@@ -38,7 +38,7 @@ func newDeleteTestModel(t *testing.T) (Model, string, string) {
 		t.Fatalf("Sync() returned error: %v", err)
 	}
 
-	return New(cfg, idx), notesDir, path
+	return skipSplash(New(cfg, idx)), notesDir, path
 }
 
 func TestDeleteFlow_ConfirmRemovesNoteAndFile(t *testing.T) {

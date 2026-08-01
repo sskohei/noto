@@ -61,7 +61,7 @@ func newTagFilterTestModel(t *testing.T) (Model, string, *index.DB) {
 
 	seedTagFilterNotes(t, notesDir, idx)
 
-	return New(cfg, idx), notesDir, idx
+	return skipSplash(New(cfg, idx)), notesDir, idx
 }
 
 func TestTagFilterFlow_SelectingTagFiltersList(t *testing.T) {

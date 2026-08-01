@@ -26,7 +26,16 @@ func newTestModel(t *testing.T) (Model, config.Config, *index.DB) {
 	}
 	t.Cleanup(func() { idx.Close() })
 
-	return New(cfg, idx), cfg, idx
+	return skipSplash(New(cfg, idx)), cfg, idx
+}
+
+// skipSplash returns m past the startup splash screen, as if the user had
+// already dismissed it. Tests other than splash_test.go's own don't care
+// about the splash and would otherwise have their first keypress consumed
+// by it instead of reaching the screen under test.
+func skipSplash(m Model) Model {
+	m.mode = modeList
+	return m
 }
 
 func TestNewNoteFlow_FullRoundTrip(t *testing.T) {
@@ -121,7 +130,7 @@ func TestHandleEditorFinished(t *testing.T) {
 	}
 	t.Cleanup(func() { idx.Close() })
 
-	m := New(cfg, idx)
+	m := skipSplash(New(cfg, idx))
 
 	now := time.Now()
 	n := storage.Note{

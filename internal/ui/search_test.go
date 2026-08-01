@@ -59,7 +59,7 @@ func newSearchTestModel(t *testing.T) (Model, string, *index.DB) {
 
 	seedSearchNotes(t, notesDir, idx)
 
-	return New(cfg, idx), notesDir, idx
+	return skipSplash(New(cfg, idx)), notesDir, idx
 }
 
 func TestSearchFlow_FiltersListAfterDebounce(t *testing.T) {
