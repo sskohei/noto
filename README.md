@@ -50,6 +50,37 @@ notes_dir = "~/.local/share/noto/notes"
 editor = ""          # 空ならOS標準の $EDITOR / $VISUAL を使用
 ```
 
+### エディターの変更方法
+
+メモ編集(`n` で新規作成、`Enter` / `e` で既存メモ編集)時に起動するエディターは、以下の優先順位で決まります。
+
+1. `config.toml` の `editor`
+2. 環境変数 `$VISUAL`
+3. 環境変数 `$EDITOR`
+4. いずれも未設定なら `vi`
+
+**環境変数で変更する場合**
+
+シェルの設定ファイル(`~/.bashrc` や `~/.zshrc` など)に追記します。noto以外のコマンドラインツールにも適用されます。
+
+```sh
+export EDITOR=nvim
+```
+
+**`config.toml` で変更する場合(noto専用に固定したい場合)**
+
+```toml
+editor = "nvim"
+```
+
+VS Codeのように、エディターの終了を待ってからnoto側の処理を再開したいGUIエディターを使う場合は、待機用のオプションを付けて指定します。
+
+```toml
+editor = "code --wait"
+```
+
+`editor` はスペース区切りでコマンドと引数をそのまま指定でき、シェルを経由せずに実行されます。そのため `|` や `&&` のようなシェル演算子は使えません。
+
 ## データの保存場所
 
 メモは平文Markdownファイル(1メモ = 1ファイル、YAML frontmatter付き)として保存され、これが常に正(source of truth)です。検索用のSQLite索引はいつでも再構築可能なキャッシュに過ぎません。
