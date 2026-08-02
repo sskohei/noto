@@ -6,10 +6,10 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"noto/internal/app"
-	"noto/internal/config"
-	"noto/internal/index"
-	"noto/internal/ui"
+	"github.com/sskohei/noto/internal/app"
+	"github.com/sskohei/noto/internal/config"
+	"github.com/sskohei/noto/internal/index"
+	"github.com/sskohei/noto/internal/ui"
 )
 
 func main() {

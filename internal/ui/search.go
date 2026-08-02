@@ -5,7 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"noto/internal/app"
+	"github.com/sskohei/noto/internal/app"
 )
 
 // searchDebounceDelay is how long to wait after the last keystroke before

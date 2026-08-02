@@ -1,6 +1,6 @@
 package app
 
-import "noto/internal/index"
+import "github.com/sskohei/noto/internal/index"
 
 // ListTags returns every distinct tag present in the index, sorted
 // alphabetically.

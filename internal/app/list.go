@@ -1,6 +1,6 @@
 package app
 
-import "noto/internal/index"
+import "github.com/sskohei/noto/internal/index"
 
 // ListNotes returns the notes currently in the index, most recently
 // updated first.

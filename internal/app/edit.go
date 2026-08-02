@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"noto/internal/index"
-	"noto/internal/storage"
+	"github.com/sskohei/noto/internal/index"
+	"github.com/sskohei/noto/internal/storage"
 )
 
 // FinalizeEdit re-reads path (as left behind by an editor session), bumps

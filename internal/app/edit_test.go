@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"noto/internal/index"
-	"noto/internal/storage"
+	"github.com/sskohei/noto/internal/index"
+	"github.com/sskohei/noto/internal/storage"
 )
 
 func TestFinalizeEdit(t *testing.T) {

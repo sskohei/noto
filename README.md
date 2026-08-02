@@ -13,7 +13,28 @@
 
 ## インストール・実行
 
+### Goがある場合
+
 Go 1.26 以降が必要です。
+
+```sh
+go install github.com/sskohei/noto/cmd/noto@latest
+```
+
+`$(go env GOPATH)/bin` にPATHが通っていれば、`noto` コマンドとして実行できます。
+
+### Goが無い場合(ビルド済みバイナリ)
+
+[GitHub Releases](https://github.com/sskohei/noto/releases) から自分のOS・アーキテクチャに合ったアーカイブをダウンロードし、展開してPATHの通った場所に置いてください。
+
+```sh
+# 例: Linux (amd64)
+curl -L -o noto.tar.gz https://github.com/sskohei/noto/releases/latest/download/noto_linux_amd64.tar.gz
+tar xzf noto.tar.gz
+sudo mv noto /usr/local/bin/
+```
+
+### ソースからビルドする場合
 
 ```sh
 git clone https://github.com/sskohei/noto.git

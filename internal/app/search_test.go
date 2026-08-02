@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"noto/internal/config"
-	"noto/internal/index"
-	"noto/internal/storage"
+	"github.com/sskohei/noto/internal/config"
+	"github.com/sskohei/noto/internal/index"
+	"github.com/sskohei/noto/internal/storage"
 )
 
 func TestSearchNotes(t *testing.T) {

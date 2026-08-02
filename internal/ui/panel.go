@@ -6,7 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"noto/internal/app"
+	"github.com/sskohei/noto/internal/app"
 )
 
 // sidebarContentWidth is the fixed content width (inside border+padding)
