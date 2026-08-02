@@ -8,9 +8,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/exp/teatest"
 
-	"noto/internal/config"
-	"noto/internal/index"
-	"noto/internal/storage"
+	"github.com/sskohei/noto/internal/config"
+	"github.com/sskohei/noto/internal/index"
+	"github.com/sskohei/noto/internal/storage"
 )
 
 func TestEditFlow_FullRoundTrip(t *testing.T) {

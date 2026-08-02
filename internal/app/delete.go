@@ -3,8 +3,8 @@ package app
 import (
 	"fmt"
 
-	"noto/internal/index"
-	"noto/internal/storage"
+	"github.com/sskohei/noto/internal/index"
+	"github.com/sskohei/noto/internal/storage"
 )
 
 // DeleteNote deletes the note file at path and reconciles the search index

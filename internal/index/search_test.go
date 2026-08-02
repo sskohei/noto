@@ -3,7 +3,7 @@ package index
 import (
 	"testing"
 
-	"noto/internal/storage"
+	"github.com/sskohei/noto/internal/storage"
 )
 
 func TestSearch(t *testing.T) {

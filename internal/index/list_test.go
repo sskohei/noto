@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"noto/internal/storage"
+	"github.com/sskohei/noto/internal/storage"
 )
 
 func TestListOrderedByUpdatedAtDesc(t *testing.T) {

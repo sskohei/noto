@@ -6,9 +6,9 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"noto/internal/app"
-	"noto/internal/config"
-	"noto/internal/index"
+	"github.com/sskohei/noto/internal/app"
+	"github.com/sskohei/noto/internal/config"
+	"github.com/sskohei/noto/internal/index"
 )
 
 // mode identifies which screen the Model is currently showing.

@@ -5,7 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"noto/internal/app"
+	"github.com/sskohei/noto/internal/app"
 )
 
 // updateConfirmDelete handles key input for modeConfirmDelete.

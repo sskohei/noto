@@ -1,4 +1,4 @@
-module noto
+module github.com/sskohei/noto
 
 go 1.26.5
 

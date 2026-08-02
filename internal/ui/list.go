@@ -6,7 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"noto/internal/index"
+	"github.com/sskohei/noto/internal/index"
 )
 
 // updateListPanel handles key input local to the notes list panel

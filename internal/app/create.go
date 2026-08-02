@@ -10,9 +10,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"noto/internal/config"
-	"noto/internal/index"
-	"noto/internal/storage"
+	"github.com/sskohei/noto/internal/config"
+	"github.com/sskohei/noto/internal/index"
+	"github.com/sskohei/noto/internal/storage"
 )
 
 // defaultEditor is used when none of cfg.Editor, $VISUAL, or $EDITOR is set.

@@ -3,7 +3,7 @@ package ui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 
-	"noto/internal/app"
+	"github.com/sskohei/noto/internal/app"
 )
 
 // editSessionFinishedMsg is sent once the $EDITOR process launched to edit

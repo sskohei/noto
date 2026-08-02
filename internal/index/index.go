@@ -10,7 +10,7 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"noto/internal/storage"
+	"github.com/sskohei/noto/internal/storage"
 )
 
 // DB is a handle to noto's SQLite/FTS5 search index.
