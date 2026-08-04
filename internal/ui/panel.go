@@ -108,6 +108,9 @@ func (m Model) updateMain(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "3":
 			next, cmd := m.switchFocus(focusList)
 			return next, cmd
+		case "4":
+			next, cmd := m.switchFocus(focusTodos)
+			return next, cmd
 		case "n":
 			m.mode = modeTitleInput
 			m.err = nil
@@ -116,7 +119,11 @@ func (m Model) updateMain(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "d":
 			if m.pendingDelete {
 				m.pendingDelete = false
-				if len(m.notes) == 0 {
+				if m.focusedPanel == focusTodos {
+					if len(m.todos) == 0 {
+						return m, nil
+					}
+				} else if len(m.notes) == 0 {
 					return m, nil
 				}
 				m.mode = modeConfirmDelete
@@ -139,6 +146,8 @@ func (m Model) updateMain(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateSearchPanel(msg)
 	case focusTags:
 		return m.updateTagsPanel(msg)
+	case focusTodos:
+		return m.updateTodoPanel(msg)
 	default:
 		return m.updateListPanel(msg)
 	}
@@ -164,11 +173,13 @@ func (m Model) viewMain() string {
 	tagsBox := renderPanel("2:タグ", m.tagsPanelContent(), sidebarContentWidth, m.focusedPanel == focusTags)
 	sidebar := lipgloss.JoinVertical(lipgloss.Left, searchBox, tagsBox)
 
-	listBox := renderPanel(m.listPanelTitle(), m.listPanelContent(), listContentWidth, m.focusedPanel == focusList)
+	noteBox := renderPanel(m.listPanelTitle(), m.listPanelContent(), listContentWidth, m.focusedPanel == focusList)
+	todoBox := renderPanel(m.todoPanelTitle(), m.todoPanelContent(), listContentWidth, m.focusedPanel == focusTodos)
+	rightColumn := lipgloss.JoinVertical(lipgloss.Left, noteBox, todoBox)
 
-	body := lipgloss.JoinHorizontal(lipgloss.Top, sidebar, listBox)
+	body := lipgloss.JoinHorizontal(lipgloss.Top, sidebar, rightColumn)
 
-	footer := "n: 新規メモ  dd: 削除  ?: ヘルプ  q: 終了  |  1/2/3, /, t: パネル移動"
+	footer := "n: 新規メモ/todo  dd: 削除  ?: ヘルプ  q: 終了  |  1/2/3/4, /, t: パネル移動"
 	if m.err != nil {
 		footer += "\nerror: " + m.err.Error()
 	}

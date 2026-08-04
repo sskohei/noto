@@ -60,7 +60,7 @@ func (m Model) listPanelTitle() string {
 func (m Model) listPanelContent() string {
 	var b strings.Builder
 
-	if m.pendingDelete {
+	if m.pendingDelete && m.focusedPanel == focusList {
 		b.WriteString("d をもう一度押すと削除\n\n")
 	}
 

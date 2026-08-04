@@ -26,10 +26,19 @@ func (m Model) updateConfirmDelete(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// confirmDelete deletes the note under the cursor and refreshes the list.
+// confirmDelete deletes the item under the cursor (a todo if the todo panel
+// is focused, otherwise a note) and refreshes the relevant list.
 func (m Model) confirmDelete() (tea.Model, tea.Cmd) {
-	note := m.notes[m.cursor]
 	m.mode = modeMain
+
+	if m.focusedPanel == focusTodos {
+		return m.confirmDeleteTodo()
+	}
+	return m.confirmDeleteNote()
+}
+
+func (m Model) confirmDeleteNote() (tea.Model, tea.Cmd) {
+	note := m.notes[m.cursor]
 
 	if err := app.DeleteNote(m.idx, m.cfg.NotesDir, note.Path); err != nil {
 		m.err = err
@@ -49,9 +58,36 @@ func (m Model) confirmDelete() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m Model) confirmDeleteTodo() (tea.Model, tea.Cmd) {
+	todo := m.todos[m.todoCursor]
+
+	if err := app.DeleteTodo(m.idx, app.TodosDir(m.cfg), todo.Path); err != nil {
+		m.err = err
+		return m, nil
+	}
+
+	todos, err := m.refreshTodos()
+	if err != nil {
+		m.err = err
+		return m, nil
+	}
+	m.todos = todos
+	if m.todoCursor >= len(m.todos) && m.todoCursor > 0 {
+		m.todoCursor--
+	}
+	m.err = nil
+	return m, nil
+}
+
 func (m Model) viewConfirmDelete() string {
 	title := "(無題)"
-	if len(m.notes) > 0 {
+	if m.focusedPanel == focusTodos {
+		if len(m.todos) > 0 {
+			if t := m.todos[m.todoCursor].Title; t != "" {
+				title = t
+			}
+		}
+	} else if len(m.notes) > 0 {
 		if t := m.notes[m.cursor].Title; t != "" {
 			title = t
 		}

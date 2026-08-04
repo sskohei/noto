@@ -13,16 +13,24 @@ type editSessionFinishedMsg struct {
 	err  error
 }
 
-// startEditingExisting hands off editing of the currently selected note to
-// $EDITOR via tea.ExecProcess, the only place this may be called from (see
-// docs/architecture.md and the plan for issue #5/#7). It is a no-op if the
-// list is empty.
+// startEditingExisting hands off editing of the currently selected note (or,
+// if the todo panel is focused, todo) to $EDITOR via tea.ExecProcess, the
+// only place this may be called from (see docs/architecture.md and the plan
+// for issue #5/#7). It is a no-op if the relevant list is empty.
 func (m Model) startEditingExisting() (tea.Model, tea.Cmd) {
-	if len(m.notes) == 0 {
-		return m, nil
+	var path string
+	if m.focusedPanel == focusTodos {
+		if len(m.todos) == 0 {
+			return m, nil
+		}
+		path = m.todos[m.todoCursor].Path
+	} else {
+		if len(m.notes) == 0 {
+			return m, nil
+		}
+		path = m.notes[m.cursor].Path
 	}
 
-	path := m.notes[m.cursor].Path
 	m.mode = modeEditing
 	m.err = nil
 
@@ -37,6 +45,28 @@ func (m Model) handleEditSessionFinished(msg editSessionFinishedMsg) (tea.Model,
 
 	if msg.err != nil {
 		m.err = msg.err
+		return m, nil
+	}
+
+	if m.focusedPanel == focusTodos {
+		edited, err := app.FinalizeTodoEdit(m.idx, app.TodosDir(m.cfg), msg.path)
+		if err != nil {
+			m.err = err
+			return m, nil
+		}
+
+		todos, err := m.refreshTodos()
+		if err != nil {
+			m.err = err
+			return m, nil
+		}
+		m.todos = todos
+		// Unlike notes (always sorted purely by updated_at), todos are
+		// grouped by done/not-done first, so bumping updated_at doesn't
+		// necessarily move the edited todo to index 0. Find its new
+		// position instead of assuming it's at the top.
+		m.todoCursor = indexOfTodo(todos, edited.ID)
+		m.err = nil
 		return m, nil
 	}
 

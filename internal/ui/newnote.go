@@ -30,13 +30,22 @@ func (m Model) updateTitleInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-// startEditing writes the new note's template file to disk and hands off
-// to $EDITOR via tea.ExecProcess, the only place this may be called from
-// (see docs/architecture.md and the plan for issue #5).
+// startEditing writes the new note's (or, if the todo panel is focused,
+// todo's) template file to disk and hands off to $EDITOR via
+// tea.ExecProcess, the only place this may be called from (see
+// docs/architecture.md and the plan for issue #5).
 func (m Model) startEditing() (tea.Model, tea.Cmd) {
 	title := m.input.Value()
 
-	_, path, err := app.PrepareNewNote(m.cfg, title)
+	var (
+		path string
+		err  error
+	)
+	if m.focusedPanel == focusTodos {
+		_, path, err = app.PrepareNewTodo(m.cfg, title)
+	} else {
+		_, path, err = app.PrepareNewNote(m.cfg, title)
+	}
 	if err != nil {
 		m.err = err
 		m.mode = modeMain
@@ -60,6 +69,23 @@ func (m Model) handleEditorFinished(msg editorFinishedMsg) (tea.Model, tea.Cmd) 
 		return m, nil
 	}
 
+	if m.focusedPanel == focusTodos {
+		if _, err := app.FinalizeNewTodo(m.idx, app.TodosDir(m.cfg), msg.path); err != nil {
+			m.err = err
+			return m, nil
+		}
+
+		todos, err := m.refreshTodos()
+		if err != nil {
+			m.err = err
+			return m, nil
+		}
+		m.todos = todos
+		m.todoCursor = 0
+		m.err = nil
+		return m, nil
+	}
+
 	if _, err := app.FinalizeNote(m.idx, m.cfg.NotesDir, msg.path); err != nil {
 		m.err = err
 		return m, nil
@@ -77,5 +103,9 @@ func (m Model) handleEditorFinished(msg editorFinishedMsg) (tea.Model, tea.Cmd) 
 }
 
 func (m Model) viewTitleInput() string {
-	return "新規メモのタイトル:\n\n" + m.input.View() + "\n\n(Enter で確定 / Esc でキャンセル)\n"
+	prompt := "新規メモのタイトル:\n\n"
+	if m.focusedPanel == focusTodos {
+		prompt = "新規todoのタイトル:\n\n"
+	}
+	return prompt + m.input.View() + "\n\n(Enter で確定 / Esc でキャンセル)\n"
 }
