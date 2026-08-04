@@ -46,6 +46,8 @@ const (
 	focusSearch
 	// focusTags is the tag selection panel.
 	focusTags
+	// focusTodos is the todo list panel.
+	focusTodos
 )
 
 const (
@@ -68,6 +70,8 @@ type Model struct {
 	selectedTags     []string
 	allTags          []string
 	tagCursor        int
+	todos            []index.TodoSummary
+	todoCursor       int
 	pendingDelete    bool
 	focusedPanel     focusPanel
 	width            int
@@ -110,6 +114,13 @@ func New(cfg config.Config, idx *index.DB) Model {
 	}
 	m.allTags = tags
 
+	todos, err := app.ListTodos(idx)
+	if err != nil {
+		m.err = err
+		return m
+	}
+	m.todos = todos
+
 	return m
 }
 
@@ -118,6 +129,12 @@ func New(cfg config.Config, idx *index.DB) Model {
 // doesn't silently drop back to the unfiltered list.
 func (m Model) refreshNotes() ([]index.NoteSummary, error) {
 	return app.FilterNotes(m.idx, m.search.Value(), m.selectedTags)
+}
+
+// refreshTodos re-fetches m.todos. Todos have no search/tag filter, so this
+// is a plain re-list.
+func (m Model) refreshTodos() ([]index.TodoSummary, error) {
+	return app.ListTodos(m.idx)
 }
 
 func (m Model) Init() tea.Cmd {
