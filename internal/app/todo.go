@@ -97,6 +97,33 @@ func DeleteTodo(idx *index.DB, todosDir, path string) error {
 	return nil
 }
 
+// DeleteCompletedTodos deletes every completed (done) todo file and
+// reconciles the search index against todosDir. It returns the number of
+// todos deleted.
+func DeleteCompletedTodos(idx *index.DB, todosDir string) (int, error) {
+	todos, err := idx.ListTodos()
+	if err != nil {
+		return 0, fmt.Errorf("app: list todos: %w", err)
+	}
+
+	deleted := 0
+	for _, t := range todos {
+		if !t.Done {
+			continue
+		}
+		if err := storage.DeleteTodo(t.Path); err != nil {
+			return deleted, fmt.Errorf("app: delete completed todo: %w", err)
+		}
+		deleted++
+	}
+
+	if err := idx.SyncTodos(todosDir); err != nil {
+		return deleted, fmt.Errorf("app: sync todo index: %w", err)
+	}
+
+	return deleted, nil
+}
+
 // ListTodos returns the todos currently in the index, incomplete first then
 // completed, each group ordered by most recently updated first.
 func ListTodos(idx *index.DB) ([]index.TodoSummary, error) {

@@ -33,9 +33,33 @@ func (m Model) updateTodoPanel(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.startEditingExisting()
 	case " ":
 		return m.toggleSelectedTodo()
+	case "D":
+		return m.startDeleteCompletedTodos()
 	}
 
 	return m, nil
+}
+
+// startDeleteCompletedTodos opens the bulk-delete confirmation prompt for
+// completed todos, or is a no-op if none are completed.
+func (m Model) startDeleteCompletedTodos() (tea.Model, tea.Cmd) {
+	if countCompletedTodos(m.todos) == 0 {
+		return m, nil
+	}
+	m.mode = modeConfirmDeleteCompletedTodos
+	m.err = nil
+	return m, nil
+}
+
+// countCompletedTodos returns how many of todos are marked done.
+func countCompletedTodos(todos []index.TodoSummary) int {
+	n := 0
+	for _, t := range todos {
+		if t.Done {
+			n++
+		}
+	}
+	return n
 }
 
 // toggleSelectedTodo flips the done state of the todo under the cursor and
