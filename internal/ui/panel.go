@@ -179,10 +179,29 @@ func (m Model) viewMain() string {
 
 	body := lipgloss.JoinHorizontal(lipgloss.Top, sidebar, rightColumn)
 
-	footer := "n: 新規メモ/todo  dd: 削除  ?: ヘルプ  q: 終了  |  1/2/3/4, /, t: パネル移動"
+	footer := m.footerText()
 	if m.err != nil {
 		footer += "\nerror: " + m.err.Error()
 	}
 
 	return body + "\n" + footer
+}
+
+// footerText returns the footer hint line for the currently focused panel.
+// The search panel shows only its own keys: per updateMain, it consumes
+// every key except Enter/Esc while focused, so the global shortcuts below
+// don't actually work there.
+func (m Model) footerText() string {
+	const globalKeys = "?: ヘルプ  q: 終了  "
+
+	switch m.focusedPanel {
+	case focusSearch:
+		return "文字入力: 絞り込み  Enter: 一覧へ戻る  Esc: クリアして一覧へ戻る"
+	case focusTags:
+		return "Enter/Space: 選択  Esc: 一覧へ戻る  n: 新規メモ  dd: 削除  " + globalKeys
+	case focusTodos:
+		return "Enter/e: 編集  Space: 完了切替  n: 新規todo  dd: 削除  D: 完了済みタスク一斉削除  " + globalKeys
+	default: // focusList
+		return "Enter/e: 編集  n: 新規メモ  dd: 削除  " + globalKeys
+	}
 }

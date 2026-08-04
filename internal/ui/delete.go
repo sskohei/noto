@@ -79,6 +79,52 @@ func (m Model) confirmDeleteTodo() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// updateConfirmDeleteCompletedTodos handles key input for
+// modeConfirmDeleteCompletedTodos.
+func (m Model) updateConfirmDeleteCompletedTodos(msg tea.Msg) (tea.Model, tea.Cmd) {
+	keyMsg, ok := msg.(tea.KeyMsg)
+	if !ok {
+		return m, nil
+	}
+
+	switch keyMsg.String() {
+	case "y":
+		return m.confirmDeleteCompletedTodos()
+	case "n", "esc":
+		m.mode = modeMain
+		return m, nil
+	}
+
+	return m, nil
+}
+
+// confirmDeleteCompletedTodos deletes every completed todo and refreshes
+// the todo list.
+func (m Model) confirmDeleteCompletedTodos() (tea.Model, tea.Cmd) {
+	m.mode = modeMain
+
+	if _, err := app.DeleteCompletedTodos(m.idx, app.TodosDir(m.cfg)); err != nil {
+		m.err = err
+		return m, nil
+	}
+
+	todos, err := m.refreshTodos()
+	if err != nil {
+		m.err = err
+		return m, nil
+	}
+	m.todos = todos
+	if m.todoCursor >= len(m.todos) && m.todoCursor > 0 {
+		m.todoCursor--
+	}
+	m.err = nil
+	return m, nil
+}
+
+func (m Model) viewConfirmDeleteCompletedTodos() string {
+	return fmt.Sprintf("完了済みのtodoを%d件削除しますか? (y/n)\n", countCompletedTodos(m.todos))
+}
+
 func (m Model) viewConfirmDelete() string {
 	title := "(無題)"
 	if m.focusedPanel == focusTodos {

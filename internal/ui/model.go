@@ -28,6 +28,10 @@ const (
 	modeEditing
 	// modeConfirmDelete is the y/n/Esc delete confirmation prompt.
 	modeConfirmDelete
+	// modeConfirmDeleteCompletedTodos is the y/n/Esc confirmation prompt for
+	// bulk-deleting completed todos, opened via the `D` key while the todo
+	// panel is focused.
+	modeConfirmDeleteCompletedTodos
 	// modeHelp is the keybindings help overlay.
 	modeHelp
 )
@@ -170,6 +174,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateTitleInput(msg)
 	case modeConfirmDelete:
 		return m.updateConfirmDelete(msg)
+	case modeConfirmDeleteCompletedTodos:
+		return m.updateConfirmDeleteCompletedTodos(msg)
 	case modeHelp:
 		return m.updateHelp(msg)
 	default:
@@ -187,6 +193,8 @@ func (m Model) View() string {
 		return ""
 	case modeConfirmDelete:
 		return m.viewConfirmDelete()
+	case modeConfirmDeleteCompletedTodos:
+		return m.viewConfirmDeleteCompletedTodos()
 	case modeHelp:
 		return m.viewHelp()
 	default:

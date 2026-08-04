@@ -296,3 +296,93 @@ func TestToggleTodoDone(t *testing.T) {
 		t.Errorf("on-disk Done = %v, want %v", onDisk.Done, got.Done)
 	}
 }
+
+// writeTestTodo writes a todo file (id, title, done) into todosDir and
+// returns the path it was written to.
+func writeTestTodo(t *testing.T, todosDir, id, title string, done bool) string {
+	t.Helper()
+
+	now := time.Now()
+	todo := storage.Todo{
+		ID:        id,
+		Title:     title,
+		Done:      done,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	path, err := storage.GenerateTodoPath(todosDir, todo)
+	if err != nil {
+		t.Fatalf("storage.GenerateTodoPath() returned error: %v", err)
+	}
+	if err := storage.WriteTodo(path, todo); err != nil {
+		t.Fatalf("storage.WriteTodo() returned error: %v", err)
+	}
+	return path
+}
+
+func TestDeleteCompletedTodos(t *testing.T) {
+	todosDir := t.TempDir()
+
+	donePath1 := writeTestTodo(t, todosDir, "018f2e4a-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "done 1", true)
+	donePath2 := writeTestTodo(t, todosDir, "018f2e4a-bbbb-bbbb-bbbb-bbbbbbbbbbbb", "done 2", true)
+	pendingPath := writeTestTodo(t, todosDir, "018f2e4a-cccc-cccc-cccc-cccccccccccc", "not done", false)
+
+	idx, err := index.Open(filepath.Join(t.TempDir(), "index.db"))
+	if err != nil {
+		t.Fatalf("index.Open() returned error: %v", err)
+	}
+	t.Cleanup(func() { idx.Close() })
+	if err := idx.SyncTodos(todosDir); err != nil {
+		t.Fatalf("SyncTodos() returned error: %v", err)
+	}
+
+	deleted, err := DeleteCompletedTodos(idx, todosDir)
+	if err != nil {
+		t.Fatalf("DeleteCompletedTodos() returned error: %v", err)
+	}
+	if deleted != 2 {
+		t.Errorf("DeleteCompletedTodos() deleted = %d, want 2", deleted)
+	}
+
+	for _, path := range []string{donePath1, donePath2} {
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Errorf("expected completed todo file to be removed at %s, stat err = %v", path, err)
+		}
+	}
+	if _, err := os.Stat(pendingPath); err != nil {
+		t.Errorf("expected pending todo file to remain at %s, stat err = %v", pendingPath, err)
+	}
+
+	todos, err := idx.ListTodos()
+	if err != nil {
+		t.Fatalf("ListTodos() returned error: %v", err)
+	}
+	if len(todos) != 1 || todos[0].Title != "not done" {
+		t.Errorf("ListTodos() = %+v, want only the pending todo to remain", todos)
+	}
+}
+
+func TestDeleteCompletedTodosNoneCompleted(t *testing.T) {
+	todosDir := t.TempDir()
+	pendingPath := writeTestTodo(t, todosDir, "018f2e4a-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "not done", false)
+
+	idx, err := index.Open(filepath.Join(t.TempDir(), "index.db"))
+	if err != nil {
+		t.Fatalf("index.Open() returned error: %v", err)
+	}
+	t.Cleanup(func() { idx.Close() })
+	if err := idx.SyncTodos(todosDir); err != nil {
+		t.Fatalf("SyncTodos() returned error: %v", err)
+	}
+
+	deleted, err := DeleteCompletedTodos(idx, todosDir)
+	if err != nil {
+		t.Fatalf("DeleteCompletedTodos() returned error: %v", err)
+	}
+	if deleted != 0 {
+		t.Errorf("DeleteCompletedTodos() deleted = %d, want 0", deleted)
+	}
+	if _, err := os.Stat(pendingPath); err != nil {
+		t.Errorf("expected pending todo file to remain at %s, stat err = %v", pendingPath, err)
+	}
+}

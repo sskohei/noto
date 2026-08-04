@@ -2,6 +2,7 @@ package ui
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -114,6 +115,60 @@ func TestNew_LoadsTagsEagerlyWithoutFocusingTagsPanel(t *testing.T) {
 
 	if len(m.allTags) != 1 || m.allTags[0] != "work" {
 		t.Errorf("allTags after New() = %v, want [work] without ever focusing the tags panel", m.allTags)
+	}
+}
+
+func TestViewMain_FooterReflectsFocusedPanel(t *testing.T) {
+	cases := []struct {
+		name    string
+		panel   focusPanel
+		want    []string
+		notWant []string
+	}{
+		{
+			name:    "list",
+			panel:   focusList,
+			want:    []string{"n: 新規メモ", "dd: 削除", "パネル移動"},
+			notWant: []string{"新規todo", "完了済み削除", "文字入力: 絞り込み"},
+		},
+		{
+			name:    "todos",
+			panel:   focusTodos,
+			want:    []string{"n: 新規todo", "Space: 完了切替", "D: 完了済み削除", "パネル移動"},
+			notWant: []string{"n: 新規メモ", "文字入力: 絞り込み"},
+		},
+		{
+			name:    "tags",
+			panel:   focusTags,
+			want:    []string{"Enter/Space: 選択", "Esc: 一覧へ戻る", "パネル移動"},
+			notWant: []string{"Space: 完了切替", "文字入力: 絞り込み"},
+		},
+		{
+			name:    "search",
+			panel:   focusSearch,
+			want:    []string{"文字入力: 絞り込み", "Enter: 一覧へ戻る"},
+			notWant: []string{"パネル移動", "?: ヘルプ", "q: 終了", "n: 新規メモ", "dd: 削除"},
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			m, _, _ := newTestModel(t)
+			m.focusedPanel = c.panel
+
+			out := m.viewMain()
+
+			for _, want := range c.want {
+				if !strings.Contains(out, want) {
+					t.Errorf("viewMain() with focus=%v missing %q\n%s", c.panel, want, out)
+				}
+			}
+			for _, notWant := range c.notWant {
+				if strings.Contains(out, notWant) {
+					t.Errorf("viewMain() with focus=%v unexpectedly contains %q\n%s", c.panel, notWant, out)
+				}
+			}
+		})
 	}
 }
 

@@ -158,7 +158,7 @@ func TestNewTodoFlow_FullRoundTrip(t *testing.T) {
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(80, 24))
 	out := tm.Output()
 
-	teatest.WaitFor(t, out, containsBytes("n: 新規メモ"), teatest.WithDuration(2*time.Second))
+	teatest.WaitFor(t, out, containsBytes("▶ 4:todoリスト"), teatest.WithDuration(2*time.Second))
 
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("n")})
 	teatest.WaitFor(t, out, containsBytes("新規todoのタイトル"), teatest.WithDuration(2*time.Second))
@@ -235,6 +235,129 @@ func TestTodoDeleteFlow_ConfirmRemovesTodoAndFile(t *testing.T) {
 	}
 	if len(paths) != 2 {
 		t.Errorf("storage.ListTodos() = %v, want 2 remaining", paths)
+	}
+}
+
+// seedExtraCompletedTodo writes one more completed todo into cfg's todos
+// dir (on top of whatever seedTodos already wrote) and re-syncs the index,
+// so tests can exercise bulk-deleting more than one completed todo.
+func seedExtraCompletedTodo(t *testing.T, cfg config.Config, idx *index.DB, id, title string) {
+	t.Helper()
+
+	todosDir := app.TodosDir(cfg)
+	ts, err := time.Parse(time.RFC3339, "2026-01-04T00:00:00Z")
+	if err != nil {
+		t.Fatalf("failed to parse fixture time: %v", err)
+	}
+	todo := storage.Todo{ID: id, Title: title, Done: true, CreatedAt: ts, UpdatedAt: ts}
+	path, err := storage.GenerateTodoPath(todosDir, todo)
+	if err != nil {
+		t.Fatalf("storage.GenerateTodoPath() returned error: %v", err)
+	}
+	if err := storage.WriteTodo(path, todo); err != nil {
+		t.Fatalf("storage.WriteTodo() returned error: %v", err)
+	}
+	if err := idx.SyncTodos(todosDir); err != nil {
+		t.Fatalf("SyncTodos() returned error: %v", err)
+	}
+}
+
+func TestTodoDeleteCompletedFlow_ConfirmRemovesOnlyCompletedTodos(t *testing.T) {
+	m, cfg, idx := newTodoTestModel(t)
+	seedTodos(t, cfg, idx)
+	seedExtraCompletedTodo(t, cfg, idx, "018f2e4a-dddd-dddd-dddd-dddddddddddd", "もう一つの完了済みタスク")
+	m = skipSplash(New(cfg, idx))
+	m.focusedPanel = focusTodos
+
+	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(80, 24))
+	out := tm.Output()
+
+	teatest.WaitFor(t, out, containsBytes("完了済みタスク"), teatest.WithDuration(2*time.Second))
+
+	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("D")})
+	teatest.WaitFor(t, out, containsBytes("完了済みのtodoを2件削除しますか"), teatest.WithDuration(2*time.Second))
+
+	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("y")})
+	teatest.WaitFor(t, out, func(bts []byte) bool {
+		return !containsBytes("完了済みタスク")(bts) && !containsBytes("もう一つの完了済みタスク")(bts)
+	}, teatest.WithDuration(2*time.Second))
+
+	if err := tm.Quit(); err != nil {
+		t.Fatalf("Quit() returned error: %v", err)
+	}
+	final := tm.FinalModel(t, teatest.WithFinalTimeout(2*time.Second)).(Model)
+	if final.mode != modeMain {
+		t.Errorf("final mode = %v, want modeMain", final.mode)
+	}
+	if len(final.todos) != 2 {
+		t.Fatalf("final.todos = %+v, want 2 remaining (only the not-done todos)", final.todos)
+	}
+	for _, todo := range final.todos {
+		if todo.Done {
+			t.Errorf("final.todos contains a done todo after bulk delete: %+v", todo)
+		}
+	}
+
+	paths, err := storage.ListTodos(app.TodosDir(cfg))
+	if err != nil {
+		t.Fatalf("storage.ListTodos() returned error: %v", err)
+	}
+	if len(paths) != 2 {
+		t.Errorf("storage.ListTodos() = %v, want 2 remaining", paths)
+	}
+}
+
+func TestTodoDeleteCompletedFlow_CancelKeepsTodos(t *testing.T) {
+	m, cfg, idx := newTodoTestModel(t)
+	seedTodos(t, cfg, idx)
+	m = skipSplash(New(cfg, idx))
+	m.focusedPanel = focusTodos
+
+	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(80, 24))
+	out := tm.Output()
+
+	teatest.WaitFor(t, out, containsBytes("完了済みタスク"), teatest.WithDuration(2*time.Second))
+
+	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("D")})
+	teatest.WaitFor(t, out, containsBytes("完了済みのtodoを1件削除しますか"), teatest.WithDuration(2*time.Second))
+
+	tm.Send(tea.KeyMsg{Type: tea.KeyEsc})
+
+	if err := tm.Quit(); err != nil {
+		t.Fatalf("Quit() returned error: %v", err)
+	}
+	final := tm.FinalModel(t, teatest.WithFinalTimeout(2*time.Second)).(Model)
+	if final.mode != modeMain {
+		t.Errorf("final mode = %v, want modeMain", final.mode)
+	}
+	if len(final.todos) != 3 {
+		t.Errorf("final.todos = %+v, want all 3 todos to remain after cancel", final.todos)
+	}
+}
+
+func TestTodoDeleteCompletedFlow_NoOpWhenNoneCompleted(t *testing.T) {
+	m, cfg, idx := newTodoTestModel(t)
+	// Seed only not-done todos so there is nothing to bulk-delete.
+	todosDir := app.TodosDir(cfg)
+	todo := storage.Todo{ID: "018f2e4a-eeee-eeee-eeee-eeeeeeeeeeee", Title: "not done", Done: false}
+	path, err := storage.GenerateTodoPath(todosDir, todo)
+	if err != nil {
+		t.Fatalf("storage.GenerateTodoPath() returned error: %v", err)
+	}
+	if err := storage.WriteTodo(path, todo); err != nil {
+		t.Fatalf("storage.WriteTodo() returned error: %v", err)
+	}
+	if err := idx.SyncTodos(todosDir); err != nil {
+		t.Fatalf("SyncTodos() returned error: %v", err)
+	}
+	m = skipSplash(New(cfg, idx))
+	m.focusedPanel = focusTodos
+
+	got, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("D")})
+	final := got.(Model)
+
+	if final.mode != modeMain {
+		t.Errorf("mode = %v, want modeMain (D with no completed todos should be a no-op)", final.mode)
 	}
 }
 
