@@ -158,7 +158,7 @@ func TestNewTodoFlow_FullRoundTrip(t *testing.T) {
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(80, 24))
 	out := tm.Output()
 
-	teatest.WaitFor(t, out, containsBytes("n: 新規メモ"), teatest.WithDuration(2*time.Second))
+	teatest.WaitFor(t, out, containsBytes("▶ 4:todoリスト"), teatest.WithDuration(2*time.Second))
 
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("n")})
 	teatest.WaitFor(t, out, containsBytes("新規todoのタイトル"), teatest.WithDuration(2*time.Second))
