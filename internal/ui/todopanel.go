@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -105,6 +106,14 @@ func (m Model) todoPanelContent() string {
 	b.WriteString(renderTodoRows(m.todos, m.todoCursor))
 
 	return b.String()
+}
+
+// todoSummaryLine returns a one-line "未完了/完了" count summary, shown in
+// place of the row list when the todo panel doesn't have focus (collapsed).
+func (m Model) todoSummaryLine() string {
+	completed := countCompletedTodos(m.todos)
+	pending := len(m.todos) - completed
+	return fmt.Sprintf("未完了: %d件 / 完了: %d件", pending, completed)
 }
 
 // renderTodoRows renders todos as a cursor-marked list, one todo per line:
