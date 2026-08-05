@@ -24,16 +24,24 @@ var (
 // sized. focused panels get a distinct border color; a non-color marker is
 // also used in the title (see renderPanel) so focus stays legible even
 // when colors don't render (e.g. under go test, or on dumb terminals).
-func panelStyle(focused bool, contentWidth int) lipgloss.Style {
+// contentHeight <= 0 leaves the box's height to size naturally from its
+// content (used by the search/tags sidebar panels); contentHeight > 0
+// pads/aligns the content to that many lines (used by the notes-list/todo
+// panels so the focused one fills the remaining terminal height).
+func panelStyle(focused bool, contentWidth, contentHeight int) lipgloss.Style {
 	color := blurredBorderColor
 	if focused {
 		color = focusedBorderColor
 	}
-	return lipgloss.NewStyle().
+	style := lipgloss.NewStyle().
 		Border(panelBorderVariant).
 		BorderForeground(color).
 		Padding(0, 1).
 		Width(contentWidth)
+	if contentHeight > 0 {
+		style = style.Height(contentHeight)
+	}
+	return style
 }
 
 // panelHorizontalFrameSize is the border+padding width panelStyle adds on
@@ -43,8 +51,16 @@ func panelHorizontalFrameSize() int {
 	return panelFrameSizeProbe.GetHorizontalFrameSize()
 }
 
-// renderPanel wraps content in a titled, bordered box.
-func renderPanel(title, content string, contentWidth int, focused bool) string {
+// panelVerticalFrameSize is the border+padding height panelStyle adds on
+// top of its content height (border top+bottom; padding is horizontal
+// only, so this is currently just the border's vertical size).
+func panelVerticalFrameSize() int {
+	return panelFrameSizeProbe.GetVerticalFrameSize()
+}
+
+// renderPanel wraps content in a titled, bordered box. See panelStyle for
+// contentHeight's meaning.
+func renderPanel(title, content string, contentWidth, contentHeight int, focused bool) string {
 	marker := "  "
 	titleStyle := lipgloss.NewStyle()
 	if focused {
@@ -53,7 +69,7 @@ func renderPanel(title, content string, contentWidth int, focused bool) string {
 	}
 	titleLine := titleStyle.Render(marker + title)
 
-	box := panelStyle(focused, contentWidth).Render(strings.TrimRight(content, "\n"))
+	box := panelStyle(focused, contentWidth, contentHeight).Render(strings.TrimRight(content, "\n"))
 	return lipgloss.JoinVertical(lipgloss.Left, titleLine, box)
 }
 
@@ -154,24 +170,29 @@ func (m Model) updateMain(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // rightColumnContents returns the notes-list and todo-list panel bodies.
-// Whichever of the two doesn't have focus collapses to an empty body
-// (title + border only) so the focused one gets the space; the notes list
-// wins by default when neither has focus (search/tags focused).
+// Whichever of the two doesn't have focus collapses (title + border only,
+// plus a one-line todo count summary in the todo panel's case) so the
+// focused one gets the space; the notes list wins by default when neither
+// has focus (search/tags focused).
 func (m Model) rightColumnContents() (noteContent, todoContent string) {
 	if m.focusedPanel == focusTodos {
 		return "", m.todoPanelContent()
 	}
-	return m.listPanelContent(), ""
+	return m.listPanelContent(), m.todoSummaryLine()
 }
 
-// viewMain renders the always-visible 3-panel layout: a search+tags
-// sidebar on the left, the notes list as the main panel on the right, and
-// a footer below.
+// viewMain renders the always-visible 4-panel layout: a search+tags
+// sidebar on the left, the notes list/todo list column on the right, and
+// a footer below. The notes-list and todo panels split the terminal's
+// remaining height (after the footer) between them, giving nearly all of
+// it to whichever has focus, so that panel fills the screen regardless of
+// how little content it has and the footer stays pinned to the bottom.
 func (m Model) viewMain() string {
-	frameSize := panelHorizontalFrameSize()
-	sidebarTotalWidth := sidebarContentWidth + frameSize
+	frameSizeH := panelHorizontalFrameSize()
+	frameSizeV := panelVerticalFrameSize()
+	sidebarTotalWidth := sidebarContentWidth + frameSizeH
 
-	listContentWidth := m.width - sidebarTotalWidth - frameSize
+	listContentWidth := m.width - sidebarTotalWidth - frameSizeH
 	if listContentWidth < 1 {
 		listContentWidth = 1
 	}
@@ -180,21 +201,40 @@ func (m Model) viewMain() string {
 	// keep reflowing correctly.
 	m.search.Width = sidebarContentWidth
 
-	searchBox := renderPanel("1:検索", m.searchPanelContent(), sidebarContentWidth, m.focusedPanel == focusSearch)
-	tagsBox := renderPanel("2:タグ", m.tagsPanelContent(), sidebarContentWidth, m.focusedPanel == focusTags)
+	searchBox := renderPanel("1:検索", m.searchPanelContent(), sidebarContentWidth, 0, m.focusedPanel == focusSearch)
+	tagsBox := renderPanel("2:タグ", m.tagsPanelContent(), sidebarContentWidth, 0, m.focusedPanel == focusTags)
 	sidebar := lipgloss.JoinVertical(lipgloss.Left, searchBox, tagsBox)
-
-	noteContent, todoContent := m.rightColumnContents()
-	noteBox := renderPanel(m.listPanelTitle(), noteContent, listContentWidth, m.focusedPanel == focusList)
-	todoBox := renderPanel(m.todoPanelTitle(), todoContent, listContentWidth, m.focusedPanel == focusTodos)
-	rightColumn := lipgloss.JoinVertical(lipgloss.Left, noteBox, todoBox)
-
-	body := lipgloss.JoinHorizontal(lipgloss.Top, sidebar, rightColumn)
 
 	footer := m.footerText()
 	if m.err != nil {
 		footer += "\nerror: " + m.err.Error()
 	}
+	footerLines := strings.Count(footer, "\n") + 1
+
+	bodyHeight := m.height - footerLines
+	if bodyHeight < 1 {
+		bodyHeight = 1
+	}
+
+	const collapsedContentHeight = 1
+	collapsedTotalHeight := 1 /* title */ + frameSizeV + collapsedContentHeight
+
+	expandedContentHeight := bodyHeight - collapsedTotalHeight - 1 /* title */ - frameSizeV
+	if expandedContentHeight < 1 {
+		expandedContentHeight = 1
+	}
+
+	noteContent, todoContent := m.rightColumnContents()
+	noteHeight, todoHeight := collapsedContentHeight, expandedContentHeight
+	if m.focusedPanel != focusTodos {
+		noteHeight, todoHeight = expandedContentHeight, collapsedContentHeight
+	}
+
+	noteBox := renderPanel(m.listPanelTitle(), noteContent, listContentWidth, noteHeight, m.focusedPanel == focusList)
+	todoBox := renderPanel(m.todoPanelTitle(), todoContent, listContentWidth, todoHeight, m.focusedPanel == focusTodos)
+	rightColumn := lipgloss.JoinVertical(lipgloss.Left, noteBox, todoBox)
+
+	body := lipgloss.JoinHorizontal(lipgloss.Top, sidebar, rightColumn)
 
 	return body + "\n" + footer
 }

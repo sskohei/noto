@@ -178,12 +178,17 @@ func TestViewMain_CollapsesUnfocusedOfListAndTodosPanels(t *testing.T) {
 		panel         focusPanel
 		wantExpanded  string
 		wantCollapsed string
+		// wantTodoSummary is checked only when the todos panel is the
+		// collapsed one: it should show a count summary instead of being
+		// fully empty.
+		wantTodoSummary string
 	}{
 		{
-			name:          "list focused expands list, collapses todos",
-			panel:         focusList,
-			wantExpanded:  "> 一番古いメモ",
-			wantCollapsed: "> [ ] 経費精算を提出する",
+			name:            "list focused expands list, collapses todos to a count summary",
+			panel:           focusList,
+			wantExpanded:    "> 一番古いメモ",
+			wantCollapsed:   "> [ ] 経費精算を提出する",
+			wantTodoSummary: "未完了: 1件 / 完了: 0件",
 		},
 		{
 			name:          "todos focused expands todos, collapses list",
@@ -192,16 +197,18 @@ func TestViewMain_CollapsesUnfocusedOfListAndTodosPanels(t *testing.T) {
 			wantCollapsed: "> 一番古いメモ",
 		},
 		{
-			name:          "search focused defaults to list expanded, todos collapsed",
-			panel:         focusSearch,
-			wantExpanded:  "> 一番古いメモ",
-			wantCollapsed: "> [ ] 経費精算を提出する",
+			name:            "search focused defaults to list expanded, todos collapsed to a count summary",
+			panel:           focusSearch,
+			wantExpanded:    "> 一番古いメモ",
+			wantCollapsed:   "> [ ] 経費精算を提出する",
+			wantTodoSummary: "未完了: 1件 / 完了: 0件",
 		},
 		{
-			name:          "tags focused defaults to list expanded, todos collapsed",
-			panel:         focusTags,
-			wantExpanded:  "> 一番古いメモ",
-			wantCollapsed: "> [ ] 経費精算を提出する",
+			name:            "tags focused defaults to list expanded, todos collapsed to a count summary",
+			panel:           focusTags,
+			wantExpanded:    "> 一番古いメモ",
+			wantCollapsed:   "> [ ] 経費精算を提出する",
+			wantTodoSummary: "未完了: 1件 / 完了: 0件",
 		},
 	}
 
@@ -220,7 +227,54 @@ func TestViewMain_CollapsesUnfocusedOfListAndTodosPanels(t *testing.T) {
 			if strings.Contains(out, c.wantCollapsed) {
 				t.Errorf("viewMain() with focus=%v unexpectedly shows collapsed panel's content %q\n%s", c.panel, c.wantCollapsed, out)
 			}
+			if c.wantTodoSummary != "" && !strings.Contains(out, c.wantTodoSummary) {
+				t.Errorf("viewMain() with focus=%v missing collapsed todo panel's count summary %q\n%s", c.panel, c.wantTodoSummary, out)
+			}
 		})
+	}
+}
+
+// TestViewMain_FocusedListOrTodosPanelFillsRemainingHeight verifies that
+// the focused one of the notes-list/todos panels expands to consume the
+// terminal's remaining height (after the footer), even when it has very
+// little content — not just enough to fit its own rows — and that the
+// footer stays pinned to the last line of the rendered output.
+func TestViewMain_FocusedListOrTodosPanelFillsRemainingHeight(t *testing.T) {
+	m, _, _ := newTestModel(t)
+	m.width = 80
+	m.height = 30
+	m.notes = []index.NoteSummary{{ID: "a", Path: "/tmp/a.md", Title: "唯一のメモ"}}
+	m.todos = nil
+	m.focusedPanel = focusList
+
+	out := m.viewMain()
+	lines := strings.Split(out, "\n")
+
+	if got := len(lines); got != m.height {
+		t.Errorf("viewMain() output has %d lines, want %d (== m.height, footer pinned to bottom)\n%s", got, m.height, out)
+	}
+
+	footerLine := lines[len(lines)-1]
+	if !strings.Contains(footerLine, "?: ヘルプ") {
+		t.Errorf("last line = %q, want it to be the footer", footerLine)
+	}
+}
+
+func TestViewMain_DegradesGracefullyOnVerySmallHeight(t *testing.T) {
+	m, _, _ := newTestModel(t)
+	m.width = 80
+	m.height = 5
+
+	for _, panel := range []focusPanel{focusList, focusTodos, focusSearch, focusTags} {
+		m.focusedPanel = panel
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Fatalf("viewMain() panicked with focus=%v and m.height=5: %v", panel, r)
+				}
+			}()
+			_ = m.viewMain()
+		}()
 	}
 }
 
