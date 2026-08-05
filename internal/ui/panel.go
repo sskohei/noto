@@ -153,6 +153,17 @@ func (m Model) updateMain(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
+// rightColumnContents returns the notes-list and todo-list panel bodies.
+// Whichever of the two doesn't have focus collapses to an empty body
+// (title + border only) so the focused one gets the space; the notes list
+// wins by default when neither has focus (search/tags focused).
+func (m Model) rightColumnContents() (noteContent, todoContent string) {
+	if m.focusedPanel == focusTodos {
+		return "", m.todoPanelContent()
+	}
+	return m.listPanelContent(), ""
+}
+
 // viewMain renders the always-visible 3-panel layout: a search+tags
 // sidebar on the left, the notes list as the main panel on the right, and
 // a footer below.
@@ -173,8 +184,9 @@ func (m Model) viewMain() string {
 	tagsBox := renderPanel("2:タグ", m.tagsPanelContent(), sidebarContentWidth, m.focusedPanel == focusTags)
 	sidebar := lipgloss.JoinVertical(lipgloss.Left, searchBox, tagsBox)
 
-	noteBox := renderPanel(m.listPanelTitle(), m.listPanelContent(), listContentWidth, m.focusedPanel == focusList)
-	todoBox := renderPanel(m.todoPanelTitle(), m.todoPanelContent(), listContentWidth, m.focusedPanel == focusTodos)
+	noteContent, todoContent := m.rightColumnContents()
+	noteBox := renderPanel(m.listPanelTitle(), noteContent, listContentWidth, m.focusedPanel == focusList)
+	todoBox := renderPanel(m.todoPanelTitle(), todoContent, listContentWidth, m.focusedPanel == focusTodos)
 	rightColumn := lipgloss.JoinVertical(lipgloss.Left, noteBox, todoBox)
 
 	body := lipgloss.JoinHorizontal(lipgloss.Top, sidebar, rightColumn)

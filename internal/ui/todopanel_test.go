@@ -87,13 +87,16 @@ func TestTodoPanelFlow_ShowsTodosAndCursorMoves(t *testing.T) {
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(80, 24))
 	out := tm.Output()
 
-	// incomplete-first ordering: the two not-done todos come before the
-	// done one, most recently updated first. This (and the cursor mark on
-	// the first row) is already true in the very first rendered frame.
-	teatest.WaitFor(t, out, containsBytes("> [ ] 経費精算を提出する"), teatest.WithDuration(2*time.Second))
-
+	// The todo panel body only renders while it has focus (unfocused it
+	// collapses to title+border), so focus it before checking its content.
+	// Both the focus marker and the row text land in the same frame, so
+	// wait for the row text alone (finding it also proves focus, since an
+	// unfocused todo panel renders no rows at all).
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("4")})
-	teatest.WaitFor(t, out, containsBytes("▶ 4:todoリスト"), teatest.WithDuration(2*time.Second))
+
+	// incomplete-first ordering: the two not-done todos come before the
+	// done one, most recently updated first.
+	teatest.WaitFor(t, out, containsBytes("> [ ] 経費精算を提出する"), teatest.WithDuration(2*time.Second))
 
 	// The cursor mark moving onto this row is new content relative to the
 	// frames seen so far, so it's safe to wait for.

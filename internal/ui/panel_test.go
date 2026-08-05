@@ -172,6 +172,58 @@ func TestViewMain_FooterReflectsFocusedPanel(t *testing.T) {
 	}
 }
 
+func TestViewMain_CollapsesUnfocusedOfListAndTodosPanels(t *testing.T) {
+	cases := []struct {
+		name          string
+		panel         focusPanel
+		wantExpanded  string
+		wantCollapsed string
+	}{
+		{
+			name:          "list focused expands list, collapses todos",
+			panel:         focusList,
+			wantExpanded:  "> 一番古いメモ",
+			wantCollapsed: "> [ ] 経費精算を提出する",
+		},
+		{
+			name:          "todos focused expands todos, collapses list",
+			panel:         focusTodos,
+			wantExpanded:  "> [ ] 経費精算を提出する",
+			wantCollapsed: "> 一番古いメモ",
+		},
+		{
+			name:          "search focused defaults to list expanded, todos collapsed",
+			panel:         focusSearch,
+			wantExpanded:  "> 一番古いメモ",
+			wantCollapsed: "> [ ] 経費精算を提出する",
+		},
+		{
+			name:          "tags focused defaults to list expanded, todos collapsed",
+			panel:         focusTags,
+			wantExpanded:  "> 一番古いメモ",
+			wantCollapsed: "> [ ] 経費精算を提出する",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			m, _, _ := newTestModel(t)
+			m.notes = []index.NoteSummary{{ID: "a", Path: "/tmp/a.md", Title: "一番古いメモ"}}
+			m.todos = []index.TodoSummary{{ID: "b", Path: "/tmp/b.md", Title: "経費精算を提出する"}}
+			m.focusedPanel = c.panel
+
+			out := m.viewMain()
+
+			if !strings.Contains(out, c.wantExpanded) {
+				t.Errorf("viewMain() with focus=%v missing expanded content %q\n%s", c.panel, c.wantExpanded, out)
+			}
+			if strings.Contains(out, c.wantCollapsed) {
+				t.Errorf("viewMain() with focus=%v unexpectedly shows collapsed panel's content %q\n%s", c.panel, c.wantCollapsed, out)
+			}
+		})
+	}
+}
+
 func TestCtrlC_QuitsRegardlessOfMode(t *testing.T) {
 	for _, mode := range []mode{modeMain, modeHelp, modeTitleInput, modeConfirmDelete} {
 		m, _, _ := newTestModel(t)
