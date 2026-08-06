@@ -28,14 +28,50 @@ go install github.com/sskohei/noto/cmd/noto@latest
 
 ### Goが無い場合(ビルド済みバイナリ)
 
-[GitHub Releases](https://github.com/sskohei/noto/releases) から自分のOS・アーキテクチャに合ったアーカイブをダウンロードし、展開してPATHの通った場所に置いてください。
+[GitHub Releases](https://github.com/sskohei/noto/releases) から自分のOS・アーキテクチャに合ったアーカイブをダウンロードし、展開してPATHの通った場所に置いてください。リリース資産のファイル名にはバージョン番号が含まれる(例: `noto_0.1.2_linux_amd64.tar.gz`)ため、GitHub Releases APIで最新版のダウンロードURLを取得してから展開する方法を以下に示します。
+
+#### Linux
 
 ```sh
-# 例: Linux (amd64)
-curl -L -o noto.tar.gz https://github.com/sskohei/noto/releases/latest/download/noto_linux_amd64.tar.gz
+url=$(curl -s https://api.github.com/repos/sskohei/noto/releases/latest \
+  | grep browser_download_url | grep linux_amd64.tar.gz | cut -d '"' -f 4)
+curl -L -o noto.tar.gz "$url"
 tar xzf noto.tar.gz
 sudo mv noto /usr/local/bin/
 ```
+
+arm64環境では `linux_amd64` を `linux_arm64` に読み替えてください。
+
+#### macOS
+
+```sh
+url=$(curl -s https://api.github.com/repos/sskohei/noto/releases/latest \
+  | grep browser_download_url | grep darwin_arm64.tar.gz | cut -d '"' -f 4)
+curl -L -o noto.tar.gz "$url"
+tar xzf noto.tar.gz
+sudo mv noto /usr/local/bin/
+```
+
+Intel Macでは `darwin_arm64` を `darwin_amd64` に読み替えてください。未署名バイナリのため、初回起動時にGatekeeperにブロックされる場合は以下のいずれかで解除してください。
+
+```sh
+xattr -d com.apple.quarantine /usr/local/bin/noto
+```
+
+(またはFinderで `noto` を右クリック(またはControlキーを押しながらクリック)→「開く」を選択)
+
+#### Windows
+
+PowerShellで以下を実行します(amd64の例。arm64環境では `windows_amd64` を `windows_arm64` に読み替えてください)。
+
+```powershell
+$release = Invoke-RestMethod https://api.github.com/repos/sskohei/noto/releases/latest
+$asset = $release.assets | Where-Object { $_.name -like "*windows_amd64.zip" }
+Invoke-WebRequest -Uri $asset.browser_download_url -OutFile noto.zip
+Expand-Archive -Path noto.zip -DestinationPath .
+```
+
+展開してできた `noto.exe` を、PATHが通ったフォルダ(例: `%USERPROFILE%\bin`。無ければ作成し、システム環境変数のPATHに追加)に移動してください。TUIの表示が崩れないよう、レガシーな`cmd.exe`単体ではなく [Windows Terminal](https://apps.microsoft.com/detail/9n0dx20hk701) の利用を推奨します。
 
 ### ソースからビルドする場合
 
@@ -121,6 +157,24 @@ editor = "code --wait"
 | 設定ファイル | `~/.config/noto/config.toml` | `$XDG_CONFIG_HOME/noto/config.toml` |
 
 詳細なファイル形式・DBスキーマは [docs/data-model.md](docs/data-model.md) を参照してください。
+
+## アンインストール方法
+
+まずバイナリを削除します。
+
+```sh
+# go install で入れた場合
+rm "$(go env GOPATH)/bin/noto"
+
+# ビルド済みバイナリを手動配置した場合(配置先の例)
+sudo rm /usr/local/bin/noto
+```
+
+メモ・索引・設定ファイルも削除する場合は、上記の「データの保存場所」を参照のうえ以下を実行してください(メモ本体も削除されるため、必要ならバックアップしてから実行してください)。
+
+```sh
+rm -rf ~/.local/share/noto ~/.config/noto
+```
 
 ## 技術スタック
 
