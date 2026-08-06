@@ -81,6 +81,140 @@ func TestDeleteFlow_ConfirmRemovesNoteAndFile(t *testing.T) {
 	}
 }
 
+func TestDeleteFlow_RemovesTagWhenLastTaggedNoteDeleted(t *testing.T) {
+	notesDir := t.TempDir()
+	cfg := config.Config{NotesDir: notesDir}
+	idx, err := index.Open(filepath.Join(t.TempDir(), "index.db"))
+	if err != nil {
+		t.Fatalf("index.Open() returned error: %v", err)
+	}
+	t.Cleanup(func() { idx.Close() })
+
+	now := time.Now()
+	tagged := storage.Note{
+		ID:        "018f2e4a-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+		Title:     "タグ付きメモ",
+		CreatedAt: now,
+		UpdatedAt: now,
+		Tags:      []string{"消えるタグ"},
+	}
+	taggedPath, err := storage.GeneratePath(notesDir, tagged)
+	if err != nil {
+		t.Fatalf("storage.GeneratePath() returned error: %v", err)
+	}
+	if err := storage.Write(taggedPath, tagged); err != nil {
+		t.Fatalf("storage.Write() returned error: %v", err)
+	}
+
+	untagged := storage.Note{
+		ID:        "018f2e4a-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+		Title:     "タグなしメモ",
+		CreatedAt: now.Add(time.Second),
+		UpdatedAt: now.Add(time.Second),
+	}
+	untaggedPath, err := storage.GeneratePath(notesDir, untagged)
+	if err != nil {
+		t.Fatalf("storage.GeneratePath() returned error: %v", err)
+	}
+	if err := storage.Write(untaggedPath, untagged); err != nil {
+		t.Fatalf("storage.Write() returned error: %v", err)
+	}
+
+	if err := idx.Sync(notesDir); err != nil {
+		t.Fatalf("Sync() returned error: %v", err)
+	}
+
+	m := skipSplash(New(cfg, idx))
+	if !containsTag(m.allTags, "消えるタグ") {
+		t.Fatalf("allTags before delete = %v, want it to contain 消えるタグ", m.allTags)
+	}
+
+	// Focus the tags panel before deleting: switchFocus only refreshes
+	// allTags on a transition *into* focusTags, so if confirmDeleteNote
+	// didn't refresh it itself, staying focused on the tags panel throughout
+	// would never notice the tag disappearing.
+	m.focusedPanel = focusTags
+
+	// Notes are sorted newest-first, so the tagged note (older) is at
+	// cursor 1.
+	m.cursor = 1
+	if m.notes[m.cursor].Path != taggedPath {
+		t.Fatalf("m.notes[%d].Path = %q, want %q", m.cursor, m.notes[m.cursor].Path, taggedPath)
+	}
+
+	got, _ := m.confirmDeleteNote()
+	final := got.(Model)
+
+	if final.err != nil {
+		t.Fatalf("err = %v, want nil", final.err)
+	}
+	if containsTag(final.allTags, "消えるタグ") {
+		t.Errorf("allTags = %v, want it to no longer contain 消えるタグ", final.allTags)
+	}
+}
+
+func TestDeleteFlow_KeepsTagWhenOtherNoteStillHasIt(t *testing.T) {
+	notesDir := t.TempDir()
+	cfg := config.Config{NotesDir: notesDir}
+	idx, err := index.Open(filepath.Join(t.TempDir(), "index.db"))
+	if err != nil {
+		t.Fatalf("index.Open() returned error: %v", err)
+	}
+	t.Cleanup(func() { idx.Close() })
+
+	now := time.Now()
+	first := storage.Note{
+		ID:        "018f2e4a-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+		Title:     "1件目",
+		CreatedAt: now,
+		UpdatedAt: now,
+		Tags:      []string{"残るタグ"},
+	}
+	firstPath, err := storage.GeneratePath(notesDir, first)
+	if err != nil {
+		t.Fatalf("storage.GeneratePath() returned error: %v", err)
+	}
+	if err := storage.Write(firstPath, first); err != nil {
+		t.Fatalf("storage.Write() returned error: %v", err)
+	}
+
+	second := storage.Note{
+		ID:        "018f2e4a-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+		Title:     "2件目",
+		CreatedAt: now.Add(time.Second),
+		UpdatedAt: now.Add(time.Second),
+		Tags:      []string{"残るタグ"},
+	}
+	secondPath, err := storage.GeneratePath(notesDir, second)
+	if err != nil {
+		t.Fatalf("storage.GeneratePath() returned error: %v", err)
+	}
+	if err := storage.Write(secondPath, second); err != nil {
+		t.Fatalf("storage.Write() returned error: %v", err)
+	}
+
+	if err := idx.Sync(notesDir); err != nil {
+		t.Fatalf("Sync() returned error: %v", err)
+	}
+
+	m := skipSplash(New(cfg, idx))
+	// Notes are sorted newest-first, so "2件目" is at cursor 0.
+	m.cursor = 0
+	if m.notes[m.cursor].Path != secondPath {
+		t.Fatalf("m.notes[%d].Path = %q, want %q", m.cursor, m.notes[m.cursor].Path, secondPath)
+	}
+
+	got, _ := m.confirmDeleteNote()
+	final := got.(Model)
+
+	if final.err != nil {
+		t.Fatalf("err = %v, want nil", final.err)
+	}
+	if !containsTag(final.allTags, "残るタグ") {
+		t.Errorf("allTags = %v, want it to still contain 残るタグ", final.allTags)
+	}
+}
+
 func TestDeleteFlow_NCancelsWithoutDeleting(t *testing.T) {
 	m, _, path := newDeleteTestModel(t)
 

@@ -160,6 +160,55 @@ func TestHandleEditorFinished(t *testing.T) {
 	}
 }
 
+func TestHandleEditorFinished_RefreshesTags(t *testing.T) {
+	notesDir := t.TempDir()
+	cfg := config.Config{NotesDir: notesDir}
+	idx, err := index.Open(filepath.Join(t.TempDir(), "index.db"))
+	if err != nil {
+		t.Fatalf("index.Open() returned error: %v", err)
+	}
+	t.Cleanup(func() { idx.Close() })
+
+	m := skipSplash(New(cfg, idx))
+	if len(m.allTags) != 0 {
+		t.Fatalf("allTags before save = %v, want empty", m.allTags)
+	}
+
+	// Focus the tags panel before "saving" the new note: switchFocus only
+	// refreshes allTags on a transition *into* focusTags, so if
+	// handleEditorFinished didn't refresh it itself, staying focused on the
+	// tags panel throughout would never pick up the new tag.
+	m.focusedPanel = focusTags
+
+	now := time.Now()
+	n := storage.Note{
+		ID:        "018f2e4a-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+		Title:     "new note",
+		CreatedAt: now,
+		UpdatedAt: now,
+		Tags:      []string{"newtag"},
+		Body:      "hello\n",
+	}
+	path, err := storage.GeneratePath(notesDir, n)
+	if err != nil {
+		t.Fatalf("storage.GeneratePath() returned error: %v", err)
+	}
+	if err := storage.Write(path, n); err != nil {
+		t.Fatalf("storage.Write() returned error: %v", err)
+	}
+
+	m.mode = modeEditing
+	got, _ := m.Update(editorFinishedMsg{path: path, err: nil})
+	final := got.(Model)
+
+	if final.err != nil {
+		t.Fatalf("err = %v, want nil", final.err)
+	}
+	if !containsTag(final.allTags, "newtag") {
+		t.Errorf("allTags = %v, want it to contain %q", final.allTags, "newtag")
+	}
+}
+
 func TestHandleEditorFinished_PropagatesError(t *testing.T) {
 	m, _, _ := newTestModel(t)
 	m.mode = modeEditing
@@ -179,6 +228,15 @@ func TestHandleEditorFinished_PropagatesError(t *testing.T) {
 type errFake struct{}
 
 func (errFake) Error() string { return "fake editor error" }
+
+func containsTag(tags []string, want string) bool {
+	for _, tag := range tags {
+		if tag == want {
+			return true
+		}
+	}
+	return false
+}
 
 func containsBytes(s string) func([]byte) bool {
 	return func(bts []byte) bool {
