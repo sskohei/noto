@@ -82,6 +82,17 @@ func (m Model) handleEditSessionFinished(msg editSessionFinishedMsg) (tea.Model,
 	}
 	m.notes = notes
 	m.cursor = 0 // the edited note's updated_at is now newest, so it moves to the top
+
+	tags, err := m.refreshTags()
+	if err != nil {
+		m.err = err
+		return m, nil
+	}
+	m.allTags = tags
+	if m.tagCursor >= len(m.allTags) {
+		m.tagCursor = 0
+	}
+
 	m.err = nil
 	return m, nil
 }

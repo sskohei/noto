@@ -138,6 +138,64 @@ func TestStartEditingExisting_NoOpWhenListEmpty(t *testing.T) {
 	}
 }
 
+func TestHandleEditSessionFinished_RefreshesTags(t *testing.T) {
+	notesDir := t.TempDir()
+	cfg := config.Config{NotesDir: notesDir}
+	idx, err := index.Open(filepath.Join(t.TempDir(), "index.db"))
+	if err != nil {
+		t.Fatalf("index.Open() returned error: %v", err)
+	}
+	t.Cleanup(func() { idx.Close() })
+
+	now := time.Now()
+	n := storage.Note{
+		ID:        "018f2e4a-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+		Title:     "既存のメモ",
+		CreatedAt: now,
+		UpdatedAt: now,
+		Body:      "original body\n",
+	}
+	path, err := storage.GeneratePath(notesDir, n)
+	if err != nil {
+		t.Fatalf("storage.GeneratePath() returned error: %v", err)
+	}
+	if err := storage.Write(path, n); err != nil {
+		t.Fatalf("storage.Write() returned error: %v", err)
+	}
+	// Deliberately not idx.Sync()'d yet at this point: FinalizeEdit's own
+	// call to idx.Sync will index the note for the first time, so the fix
+	// under test isn't confounded by the mtime-diffing Sync does on notes
+	// it has already indexed (see index.DB.Sync).
+
+	m := skipSplash(New(cfg, idx))
+	if containsTag(m.allTags, "追加タグ") {
+		t.Fatalf("allTags before edit = %v, want it to not yet contain 追加タグ", m.allTags)
+	}
+
+	// Focus the tags panel before "finishing" the edit session: switchFocus
+	// only refreshes allTags on a transition *into* focusTags, so if
+	// handleEditSessionFinished didn't refresh it itself, staying focused on
+	// the tags panel throughout would never pick up the new tag.
+	m.focusedPanel = focusTags
+
+	// Simulate the editor session adding a new tag to the note.
+	n.Tags = []string{"追加タグ"}
+	if err := storage.Write(path, n); err != nil {
+		t.Fatalf("storage.Write() returned error: %v", err)
+	}
+
+	m.mode = modeEditing
+	got, _ := m.Update(editSessionFinishedMsg{path: path, err: nil})
+	final := got.(Model)
+
+	if final.err != nil {
+		t.Fatalf("err = %v, want nil", final.err)
+	}
+	if !containsTag(final.allTags, "追加タグ") {
+		t.Errorf("allTags = %v, want it to contain %q", final.allTags, "追加タグ")
+	}
+}
+
 func TestHandleEditSessionFinished_PropagatesError(t *testing.T) {
 	m, _, _ := newTestModel(t)
 	m.mode = modeEditing

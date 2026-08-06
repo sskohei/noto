@@ -141,6 +141,11 @@ func (m Model) refreshTodos() ([]index.TodoSummary, error) {
 	return app.ListTodos(m.idx)
 }
 
+// refreshTags re-fetches m.allTags.
+func (m Model) refreshTags() ([]string, error) {
+	return app.ListTags(m.idx)
+}
+
 func (m Model) Init() tea.Cmd {
 	return tea.Tick(splashDuration, func(time.Time) tea.Msg {
 		return splashTimeoutMsg{}
