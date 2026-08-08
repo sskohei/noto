@@ -182,6 +182,10 @@ func TestViewMain_CollapsesUnfocusedOfListAndTodosPanels(t *testing.T) {
 		// collapsed one: it should show a count summary instead of being
 		// fully empty.
 		wantTodoSummary string
+		// wantListSummary is checked only when the list panel is the
+		// collapsed one: it should show a count summary instead of being
+		// fully empty.
+		wantListSummary string
 	}{
 		{
 			name:            "list focused expands list, collapses todos to a count summary",
@@ -191,10 +195,11 @@ func TestViewMain_CollapsesUnfocusedOfListAndTodosPanels(t *testing.T) {
 			wantTodoSummary: "未完了: 1件 / 完了: 0件",
 		},
 		{
-			name:          "todos focused expands todos, collapses list",
-			panel:         focusTodos,
-			wantExpanded:  "> [ ] 経費精算を提出する",
-			wantCollapsed: "> 一番古いメモ",
+			name:            "todos focused expands todos, collapses list to a count summary",
+			panel:           focusTodos,
+			wantExpanded:    "> [ ] 経費精算を提出する",
+			wantCollapsed:   "> 一番古いメモ",
+			wantListSummary: "メモ: 1件",
 		},
 		{
 			name:            "search focused defaults to list expanded, todos collapsed to a count summary",
@@ -229,6 +234,9 @@ func TestViewMain_CollapsesUnfocusedOfListAndTodosPanels(t *testing.T) {
 			}
 			if c.wantTodoSummary != "" && !strings.Contains(out, c.wantTodoSummary) {
 				t.Errorf("viewMain() with focus=%v missing collapsed todo panel's count summary %q\n%s", c.panel, c.wantTodoSummary, out)
+			}
+			if c.wantListSummary != "" && !strings.Contains(out, c.wantListSummary) {
+				t.Errorf("viewMain() with focus=%v missing collapsed list panel's count summary %q\n%s", c.panel, c.wantListSummary, out)
 			}
 		})
 	}

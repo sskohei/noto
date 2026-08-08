@@ -69,6 +69,12 @@ func (m Model) listPanelContent() string {
 	return b.String()
 }
 
+// noteSummaryLine returns a one-line note count summary, shown in place of
+// the row list when the notes panel doesn't have focus (collapsed).
+func (m Model) noteSummaryLine() string {
+	return fmt.Sprintf("メモ: %d件", len(m.notes))
+}
+
 // renderNoteRows renders notes as a cursor-marked list, one note per line.
 func renderNoteRows(notes []index.NoteSummary, cursor int) string {
 	if len(notes) == 0 {
