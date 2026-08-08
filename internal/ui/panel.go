@@ -171,12 +171,11 @@ func (m Model) updateMain(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // rightColumnContents returns the notes-list and todo-list panel bodies.
 // Whichever of the two doesn't have focus collapses (title + border only,
-// plus a one-line todo count summary in the todo panel's case) so the
-// focused one gets the space; the notes list wins by default when neither
-// has focus (search/tags focused).
+// plus a one-line count summary) so the focused one gets the space; the
+// notes list wins by default when neither has focus (search/tags focused).
 func (m Model) rightColumnContents() (noteContent, todoContent string) {
 	if m.focusedPanel == focusTodos {
-		return "", m.todoPanelContent()
+		return m.noteSummaryLine(), m.todoPanelContent()
 	}
 	return m.listPanelContent(), m.todoSummaryLine()
 }
