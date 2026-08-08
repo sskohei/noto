@@ -14,8 +14,9 @@ import (
 const sidebarContentWidth = 20
 
 var (
-	focusedBorderColor  = lipgloss.Color("62")
-	blurredBorderColor  = lipgloss.Color("240")
+	focusedBorderColor  = lipgloss.Color("208") // orange
+	blurredBorderColor  = lipgloss.Color("33")  // blue
+	selectedItemColor   = lipgloss.Color("208") // orange, matches focusedBorderColor
 	panelBorderVariant  = lipgloss.RoundedBorder()
 	panelFrameSizeProbe = lipgloss.NewStyle().Border(panelBorderVariant).Padding(0, 1)
 )
@@ -62,7 +63,7 @@ func panelVerticalFrameSize() int {
 // contentHeight's meaning.
 func renderPanel(title, content string, contentWidth, contentHeight int, focused bool) string {
 	marker := "  "
-	titleStyle := lipgloss.NewStyle()
+	titleStyle := lipgloss.NewStyle().Foreground(blurredBorderColor)
 	if focused {
 		marker = "▶ "
 		titleStyle = titleStyle.Bold(true).Foreground(focusedBorderColor)
