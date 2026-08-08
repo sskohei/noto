@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/sskohei/noto/internal/app"
 	"github.com/sskohei/noto/internal/index"
@@ -140,7 +141,11 @@ func renderTodoRows(todos []index.TodoSummary, cursor int) string {
 			title = "(無題)"
 		}
 
-		b.WriteString(mark + checkbox + " " + title + "\n")
+		row := mark + checkbox + " " + title
+		if i == cursor {
+			row = lipgloss.NewStyle().Foreground(selectedItemColor).Render(row)
+		}
+		b.WriteString(row + "\n")
 	}
 	return b.String()
 }

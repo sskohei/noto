@@ -14,8 +14,9 @@ import (
 const sidebarContentWidth = 20
 
 var (
-	focusedBorderColor  = lipgloss.Color("62")
-	blurredBorderColor  = lipgloss.Color("240")
+	focusedBorderColor  = lipgloss.Color("208") // orange
+	blurredBorderColor  = lipgloss.Color("33")  // blue
+	selectedItemColor   = lipgloss.Color("208") // orange, matches focusedBorderColor
 	panelBorderVariant  = lipgloss.RoundedBorder()
 	panelFrameSizeProbe = lipgloss.NewStyle().Border(panelBorderVariant).Padding(0, 1)
 )

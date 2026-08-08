@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/sskohei/noto/internal/index"
 )
@@ -98,7 +99,11 @@ func renderNoteRows(notes []index.NoteSummary, cursor int) string {
 			tags = " [" + strings.Join(n.Tags, ", ") + "]"
 		}
 
-		fmt.Fprintf(&b, "%s%s%s  %s\n", mark, title, tags, n.UpdatedAt.Format("2006-01-02 15:04"))
+		row := fmt.Sprintf("%s%s%s  %s", mark, title, tags, n.UpdatedAt.Format("2006-01-02 15:04"))
+		if i == cursor {
+			row = lipgloss.NewStyle().Foreground(selectedItemColor).Render(row)
+		}
+		fmt.Fprintf(&b, "%s\n", row)
 	}
 	return b.String()
 }
