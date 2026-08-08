@@ -63,7 +63,7 @@ func panelVerticalFrameSize() int {
 // contentHeight's meaning.
 func renderPanel(title, content string, contentWidth, contentHeight int, focused bool) string {
 	marker := "  "
-	titleStyle := lipgloss.NewStyle()
+	titleStyle := lipgloss.NewStyle().Foreground(blurredBorderColor)
 	if focused {
 		marker = "▶ "
 		titleStyle = titleStyle.Bold(true).Foreground(focusedBorderColor)
